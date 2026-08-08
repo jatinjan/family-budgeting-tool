@@ -340,29 +340,43 @@ if (profile?.onboarding_status === 'plan_complete') {
 
 
 
-### 3.1 Implementation Steps
+### 3.1 UI
+
+Logged-in family users must be able to sign out from the app (not only admin).
+
+| Location | Control |
+|----------|---------|
+| `components/page-header.tsx` | **Sign out** button (top-right) when `user` is present |
+
+Shown on pages that use `PageHeader` (Household, Children, Adults, Dashboard, Planning, Summary, etc.).
+
+### 3.2 Implementation Steps
 
 ```typescript
-// 1. Log activity before signing out
+// 1. Log activity before signing out (optional if RPC unavailable)
 await supabase.rpc('log_activity', {
   p_event_type: 'logout',
   p_message: 'User signed out',
 });
 
-// 2. Sign out from Supabase
-const { error } = await supabase.auth.signOut();
+// 2. Sign out from Supabase via AuthContext.signOut()
+const { error } = await signOut();
 
-// 3. Clear local state
-setUser(null);
-setSession(null);
-setProfile(null);
+// 3. Clear local state (handled by AuthContext)
 
 // 4. Clear sync queue (optional - keep local data for offline use)
 // await clearSyncQueue();
 
-// 5. Redirect to landing
-router.push('/');
+// 5. Hard redirect to landing (clears client state cleanly)
+window.location.href = '/';
 ```
+
+### 3.3 Acceptance criteria
+
+- [ ] Signed-in user sees **Sign out** on app pages with PageHeader
+- [ ] Clicking Sign out ends the session and returns to `/`
+- [ ] Visiting `/household` after sign out redirects to `/login`
+- [ ] Signing in again restores cloud/local budget data for that account
 
 ---
 
