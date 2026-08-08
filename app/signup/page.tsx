@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase"
 import { checkLocalData, migrateToCloud, clearLocalData, type LocalDataSummary } from "@/lib/migration"
 import { MigrationPrompt } from "@/components/migration-prompt"
 import { useToast } from "@/hooks/use-toast"
-import { Heart, Check, X, Sparkles, Tag, Star, Loader2, AlertCircle } from "lucide-react"
+import { Heart, Check, X, Sparkles, Tag, Star, Loader2, AlertCircle, Mail } from "lucide-react"
 
 type PlanType = "founding" | "monthly" | "annual"
 
@@ -93,6 +93,7 @@ export default function SignUpPage() {
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [showConfirmationMessage, setShowConfirmationMessage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [checkingPromo, setCheckingPromo] = useState(false)
   const [showMigrationPrompt, setShowMigrationPrompt] = useState(false)
@@ -138,12 +139,19 @@ export default function SignUpPage() {
         return
       }
 
+      // Email confirmation required — no session yet (auth-flow §1.6)
+      if (needsEmailConfirmation) {
+        setShowConfirmationMessage(true)
+        setIsSubmitting(false)
+        return
+      }
+
       // If promo code was used, increment redemption count
       if (promoResult?.valid && promoResult.promo) {
         await supabase.rpc('redeem_promo_code', { code_input: promoResult.promo.code })
       }
 
-      // Check for existing local data
+      // Check for existing local data (only when session exists)
       const dataSummary = await checkLocalData()
       
       if (dataSummary.hasData) {
@@ -243,7 +251,55 @@ export default function SignUpPage() {
     )
   }
 
-  // Success state
+  // Email confirmation required (auth-flow §1.6.1)
+  if (showConfirmationMessage) {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center px-4 pb-24"
+        style={{
+          background: `linear-gradient(135deg, ${BRAND.teal}14 0%, ${BRAND.sand}1a 100%)`,
+        }}
+      >
+        <Card className="w-full max-w-md border-0 bg-white shadow-xl text-center">
+          <CardContent className="pt-8 pb-8">
+            <div
+              className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+              style={{ backgroundColor: `${BRAND.teal}20` }}
+            >
+              <Mail className="h-8 w-8" style={{ color: BRAND.deepTeal }} />
+            </div>
+
+            <h1
+              className="font-[Nunito] text-2xl font-bold mb-2"
+              style={{ color: BRAND.deepTeal }}
+            >
+              Check your email
+            </h1>
+
+            <p className="text-gray-600 mb-6">
+              We sent a confirmation link to{" "}
+              <span className="font-medium" style={{ color: BRAND.charcoal }}>
+                {email.trim().toLowerCase()}
+              </span>
+              . Click the link to activate your account, then you can start budgeting.
+            </p>
+
+            <div className="space-y-3">
+              <Button
+                className="w-full text-white"
+                style={{ backgroundColor: BRAND.deepTeal }}
+                onClick={() => router.push("/login")}
+              >
+                Back to sign in
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Success state (Confirm email OFF — session exists immediately)
   if (isSubmitted) {
     const finalPlan = promoResult?.appliedPlan || selectedPlan
     const planInfo = PLAN_PRICES[finalPlan]

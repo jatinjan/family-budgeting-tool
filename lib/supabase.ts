@@ -34,11 +34,16 @@ export async function getSession() {
 
 // Auth helpers
 export async function signUp(email: string, password: string, metadata?: { family_name?: string; promo_code_used?: string }) {
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '')
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: metadata,
+      emailRedirectTo: `${appUrl}/auth/callback`,
     },
   })
   return { data, error }

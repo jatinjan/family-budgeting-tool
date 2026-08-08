@@ -22,12 +22,16 @@ This spec defines the complete authentication flow using Supabase Auth with emai
 
 ### 1.2 Required Fields
 
-| Field | Type | Validation | Required |
-|-------|------|------------|----------|
-| `email` | string | Valid email format | Yes |
-| `password` | string | Min 8 chars | Yes |
-| `family_name` | string | Non-empty after trim | Yes |
-| `promo_code` | string | Valid in promo_codes table | No (but encouraged) |
+
+| Field         | Type   | Validation                 | Required            |
+| ------------- | ------ | -------------------------- | ------------------- |
+| `email`       | string | Valid email format         | Yes                 |
+| `password`    | string | Min 8 chars                | Yes                 |
+| `family_name` | string | Non-empty after trim       | Yes                 |
+| `promo_code`  | string | Valid in promo_codes table | No (but encouraged) |
+
+
+
 
 ### 1.3 Implementation Steps
 
@@ -75,30 +79,186 @@ if (data.user && !data.session) {
 router.push('/household');
 ```
 
+
+
 ### 1.4 Error States
 
-| Error | Message | Recovery |
-|-------|---------|----------|
-| Email already registered | "An account with this email already exists" | Link to /login |
-| Invalid promo code | "This promo code is invalid or expired" | Clear promo field |
-| Weak password | "Password must be at least 8 characters" | Highlight password field |
-| Network error | "Unable to connect. Please try again." | Show retry button |
+
+| Error                    | Message                                     | Recovery                 |
+| ------------------------ | ------------------------------------------- | ------------------------ |
+| Email already registered | "An account with this email already exists" | Link to /login           |
+| Invalid promo code       | "This promo code is invalid or expired"     | Clear promo field        |
+| Weak password            | "Password must be at least 8 characters"    | Highlight password field |
+| Network error            | "Unable to connect. Please try again."      | Show retry button        |
+
+
+
 
 ### 1.5 Post-Signup Trigger
 
 The database trigger `handle_new_user()` automatically:
+
 1. Creates a row in `profiles` table
 2. Logs signup event in `activity_log`
 
+### 1.6 Email Confirmation Flow (Production)
+
+**Status:** Implemented in app — verify on production after deploy  
+**When this applies:** Supabase Auth → Providers → Email → **Confirm email** is ON (recommended for production).
+
+**Email delivery note:** By default Supabase sends confirmation emails (e.g. from their mail domain). For client-branded sender addresses (e.g. `noreply@mybalancedfamilyfinances.com`), configure **Custom SMTP** + DNS (SPF/DKIM) in the Supabase Dashboard. That is ops/config scope, not app code.
+
+#### Problem this section solves
+
+With Confirm email enabled:
+
+1. `signUp()` creates a user but returns **no session** (`user` exists, `session` is null)
+2. Supabase sends a confirmation email
+3. The user is **not logged in** until they click the email link
+4. The app must **not** show “Start budgeting” or send them to `/household` until they are confirmed and have a session
+
+#### User journey
+
+```
+/signup → Create account → (no session) → "Check your email" screen
+    ↓
+User opens email → clicks confirmation link
+    ↓
+App /auth/callback exchanges code → sets session cookie
+    ↓
+Redirect to /household (logged in)
+```
+
+If the user tries `/household` before confirming → middleware redirects to `/login`.
+
+#### 1.6.1 After signup — show confirm-email screen (not success + Start budgeting)
+
+When `needsEmailConfirmation === true` (i.e. `data.user && !data.session`):
+
+**UI requirements:**
+
+| Element | Content |
+|---------|---------|
+| Title | Check your email |
+| Body | We sent a confirmation link to **{email}**. Click the link to activate your account, then you can start budgeting. |
+| Primary action | None that goes to `/household` |
+| Secondary action | **Back to sign in** → `/login` |
+| Optional | **Resend confirmation email** (nice-to-have) |
+
+**Do not show:**
+
+- “Welcome to the family!” as if they are ready to enter the app
+- **Start budgeting** button that navigates to `/household`
+
+**Code gate (signup page):**
+
+```typescript
+const { error, needsEmailConfirmation } = await signUp(...)
+
+if (error) {
+  setError(error.message)
+  return
+}
+
+if (needsEmailConfirmation) {
+  setShowConfirmationMessage(true) // show Check your email screen
+  return
+}
+
+// Only if session exists (Confirm email OFF in Supabase):
+setIsSubmitted(true) // or router.push('/household')
+```
+
+#### 1.6.2 `emailRedirectTo` on signUp
+
+Confirmation emails must return the user to the app callback route, not a bare homepage.
+
+```typescript
+await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    data: metadata,
+    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+  },
+})
+```
+
+Production value example:
+
+`https://mybalancedfamilyfinances.com/auth/callback`
+
+#### 1.6.3 Auth callback route
+
+**Create:** `app/auth/callback/route.ts`
+
+**Responsibility:**
+
+1. Read `code` (or token params) from the request URL
+2. Exchange with Supabase for a session (SSR cookie client)
+3. On success → redirect to `/household`
+4. On failure → redirect to `/login?error=confirmation_failed`
+
+```typescript
+// Pseudocode — implement with @supabase/ssr createServerClient
+// GET /auth/callback?code=...
+const code = requestUrl.searchParams.get('code')
+if (code) {
+  await supabase.auth.exchangeCodeForSession(code)
+  return redirect('/household')
+}
+return redirect('/login?error=confirmation_failed')
+```
+
+**Middleware:** Add `/auth/callback` to public routes so the exchange can run without an existing session.
+
+#### 1.6.4 Supabase Dashboard configuration
+
+**Authentication → URL Configuration:**
+
+| Setting | Value |
+|---------|--------|
+| Site URL | `https://mybalancedfamilyfinances.com` |
+| Redirect URLs | `https://mybalancedfamilyfinances.com/**` |
+| Redirect URLs | `https://mybalancedfamilyfinances.com/auth/callback` (explicit, optional if `/**` already covers it) |
+| Redirect URLs (test) | `https://family-budgeting-tool-one.vercel.app/**` |
+
+Also ensure the confirmation email template uses the default Supabase confirmation link (or custom template that still hits the Site URL / redirect allow list).
+
+#### 1.6.5 Sign in before email confirmed
+
+If user signs in before clicking the email link:
+
+| Error | Message | Recovery |
+|-------|---------|----------|
+| Email not confirmed | Please check your email to confirm your account | Link to resend (optional) + stay on `/login` |
+
+Map Supabase `email_not_confirmed` / “Email not confirmed” to that message in login UI.
+
+#### 1.6.6 Acceptance criteria (email confirmation)
+
+- [ ] After signup with Confirm email ON, user sees **Check your email** screen (not Start budgeting)
+- [ ] Unconfirmed user cannot access `/household` (middleware redirects to `/login`)
+- [ ] Clicking the email confirmation link lands on `/auth/callback`, then `/household` while logged in
+- [ ] `emailRedirectTo` uses `NEXT_PUBLIC_APP_URL` + `/auth/callback`
+- [ ] Login before confirm shows a clear “confirm your email” message
+- [ ] Confirmed user can sign in later and reach `/household` / `/dashboard` normally
+
 ---
 
+
+
 ## 2. Sign In Flow
+
+
 
 ### 2.1 User Journey
 
 ```
 /login page → Enter credentials → Authenticate → Sync data → Redirect to /dashboard
 ```
+
+
 
 ### 2.2 Implementation Steps
 
@@ -148,18 +308,26 @@ if (profile?.onboarding_status === 'plan_complete') {
 }
 ```
 
+
+
 ### 2.3 Error States
 
-| Error | Message | Recovery |
-|-------|---------|----------|
-| Wrong credentials | "Invalid email or password" | Clear password field |
-| Account not found | "No account found with this email" | Link to /signup |
-| Email not confirmed | "Please check your email to confirm your account" | Resend link option |
-| Too many attempts | "Too many login attempts. Try again in 5 minutes." | Disable form temporarily |
+
+| Error               | Message                                            | Recovery                 |
+| ------------------- | -------------------------------------------------- | ------------------------ |
+| Wrong credentials   | "Invalid email or password"                        | Clear password field     |
+| Account not found   | "No account found with this email"                 | Link to /signup          |
+| Email not confirmed | "Please check your email to confirm your account"  | Resend link option       |
+| Too many attempts   | "Too many login attempts. Try again in 5 minutes." | Disable form temporarily |
+
 
 ---
 
+
+
 ## 3. Sign Out Flow
+
+
 
 ### 3.1 Implementation Steps
 
@@ -187,7 +355,11 @@ router.push('/');
 
 ---
 
+
+
 ## 4. Session Management
+
+
 
 ### 4.1 AuthContext Provider
 
@@ -205,6 +377,8 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 ```
+
+
 
 ### 4.2 Session Persistence
 
@@ -236,6 +410,8 @@ useEffect(() => {
 }, []);
 ```
 
+
+
 ### 4.3 Token Refresh
 
 Supabase SDK handles automatic token refresh. If refresh fails:
@@ -255,7 +431,11 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 ---
 
+
+
 ## 5. Password Reset (Future)
+
+
 
 ### 5.1 Request Reset
 
@@ -264,6 +444,8 @@ const { error } = await supabase.auth.resetPasswordForEmail(email, {
   redirectTo: `${window.location.origin}/reset-password`,
 });
 ```
+
+
 
 ### 5.2 Complete Reset
 
@@ -275,19 +457,27 @@ const { error } = await supabase.auth.updateUser({
 
 ---
 
+
+
 ## 6. Files to Create/Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `lib/supabase.ts` | Modify | Add auth helper functions |
-| `contexts/AuthContext.tsx` | Create | Auth state provider |
-| `components/providers.tsx` | Create | Provider wrapper |
-| `app/layout.tsx` | Modify | Wrap with Providers |
-| `app/signup/page.tsx` | Modify | Use real Supabase auth |
-| `app/login/page.tsx` | Create | User login page |
-| `hooks/use-auth.ts` | Create | Convenience hook |
+
+| File                       | Action | Description               |
+| -------------------------- | ------ | ------------------------- |
+| `lib/supabase.ts`          | Modify | Add auth helper functions; set `emailRedirectTo` on signUp |
+| `contexts/AuthContext.tsx` | Create | Auth state provider       |
+| `components/providers.tsx` | Create | Provider wrapper          |
+| `app/layout.tsx`           | Modify | Wrap with Providers       |
+| `app/signup/page.tsx`      | Modify | Use real Supabase auth; show Check your email when confirmation required |
+| `app/login/page.tsx`       | Create | User login page; map email-not-confirmed error |
+| `hooks/use-auth.ts`        | Create | Convenience hook          |
+| `app/auth/callback/route.ts` | Create | Exchange confirmation code for session; redirect to `/household` |
+| `middleware.ts`            | Modify | Treat `/auth/callback` as public |
+
 
 ---
+
+
 
 ## 7. Acceptance Criteria
 
@@ -300,3 +490,4 @@ const { error } = await supabase.auth.updateUser({
 - [ ] Promo code validation works before account creation
 - [ ] Profile is auto-created via database trigger
 - [ ] Activity is logged on signup/login/logout
+- [ ] Email confirmation flow works end-to-end (see §1.6.6)

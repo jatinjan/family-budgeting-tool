@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,13 +17,32 @@ const BRAND = {
   charcoal: "#4A4A4A",
 }
 
-export default function LoginPage() {
+function mapSignInError(message: string): string {
+  const lower = message.toLowerCase()
+  if (lower.includes("email not confirmed")) {
+    return "Please check your email to confirm your account"
+  }
+  if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
+    return "Invalid email or password"
+  }
+  return message
+}
+
+function LoginPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signIn, user, loading: authLoading } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Show callback failure from email confirmation link
+  useEffect(() => {
+    if (searchParams.get("error") === "confirmation_failed") {
+      setError("Email confirmation failed. Please try signing in or request a new confirmation email.")
+    }
+  }, [searchParams])
 
   // Redirect if already logged in
   useEffect(() => {
@@ -42,7 +61,7 @@ export default function LoginPage() {
       const { error: signInError } = await signIn(email.trim().toLowerCase(), password)
 
       if (signInError) {
-        setError(signInError.message)
+        setError(mapSignInError(signInError.message))
         setIsSubmitting(false)
         return
       }
@@ -195,5 +214,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#2F6B66]" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   )
 }
