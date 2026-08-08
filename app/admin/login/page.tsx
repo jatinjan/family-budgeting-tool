@@ -81,7 +81,7 @@ export default function AdminLoginPage() {
 
   return (
     <div 
-      className="flex min-h-screen items-center justify-center px-4 pb-24"
+      className="flex min-h-screen items-center justify-center px-4"
       style={{ 
         background: `linear-gradient(135deg, ${BRAND.teal}14 0%, ${BRAND.sand}1a 100%)` 
       }}

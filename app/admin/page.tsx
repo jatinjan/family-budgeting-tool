@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div 
-      className="min-h-screen pb-24"
+      className="min-h-screen"
       style={{ 
         background: `linear-gradient(180deg, ${BRAND.teal}08 0%, ${BRAND.sand}0a 100%)` 
       }}

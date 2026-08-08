@@ -83,7 +83,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // No user and trying to access protected route
-  if (!user && (isProtectedRoute(path) || isAdminRoute(path))) {
+  if (!user && isAdminRoute(path)) {
+    return NextResponse.redirect(new URL('/admin/login', request.url))
+  }
+
+  if (!user && isProtectedRoute(path)) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', path)
     return NextResponse.redirect(redirectUrl)

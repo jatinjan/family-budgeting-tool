@@ -432,7 +432,7 @@ export default function FamilyDetailPage({
   if (loading) {
     return (
       <div
-        className="min-h-screen pb-24"
+        className="min-h-screen"
         style={{
           background: `linear-gradient(180deg, ${BRAND.teal}08 0%, ${BRAND.sand}0a 100%)`,
         }}
@@ -460,7 +460,7 @@ export default function FamilyDetailPage({
 
   if (error || !familyData) {
     return (
-      <div className="min-h-screen flex items-center justify-center pb-24">
+      <div className="min-h-screen flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -523,7 +523,7 @@ export default function FamilyDetailPage({
 
   return (
     <div
-      className="min-h-screen pb-24"
+      className="min-h-screen"
       style={{
         background: `linear-gradient(180deg, ${BRAND.teal}08 0%, ${BRAND.sand}0a 100%)`,
       }}

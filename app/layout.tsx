@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Nunito, Inter } from "next/font/google"
 import "./globals.css"
-import { BottomNav } from "@/components/bottom-nav"
+import { AppShell } from "@/components/app-shell"
 import { Providers } from "@/components/providers"
 import { APP_CONFIG } from "@/lib/config"
 
@@ -48,13 +48,7 @@ export default function RootLayout({
       </head>
       <body className={`${nunito.variable} ${inter.variable} font-sans antialiased`}>
         <Providers>
-          <div 
-            className="min-h-screen pb-20"
-            style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}
-          >
-            {children}
-          </div>
-          <BottomNav />
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
