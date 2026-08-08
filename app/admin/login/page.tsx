@@ -53,7 +53,12 @@ export default function AdminLoginPage() {
         .single()
 
       if (profileError) {
-        setError('Unable to verify admin status')
+        console.error('Admin profile lookup failed:', profileError)
+        setError(
+          profileError.message?.toLowerCase().includes('recursion')
+            ? 'Unable to verify admin status (database policy error). Re-run updated RLS policies.'
+            : 'Unable to verify admin status'
+        )
         await supabase.auth.signOut()
         return
       }

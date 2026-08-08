@@ -59,6 +59,30 @@ DROP POLICY IF EXISTS "System can insert activity log" ON activity_log;
 DROP POLICY IF EXISTS "Users can insert own activity" ON activity_log;
 
 -- =====================================================
+-- STEP 2.5: ADMIN HELPER (avoids RLS recursion on profiles)
+-- Admin policies must NOT SELECT from profiles inside a
+-- profiles policy — that causes "infinite recursion" and
+-- breaks admin login with "Unable to verify admin status".
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT COALESCE(
+    (SELECT is_admin FROM public.profiles WHERE id = auth.uid()),
+    false
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon;
+
+-- =====================================================
 -- STEP 3: CREATE PROFILES POLICIES
 -- Users: SELECT/UPDATE own profile only
 -- Admins: SELECT all profiles (read-only)
@@ -75,10 +99,7 @@ CREATE POLICY "Users can update own profile"
 
 CREATE POLICY "Admins can view all profiles"
   ON profiles FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- Allow the trigger to insert new profiles
 CREATE POLICY "Service role can insert profiles"
@@ -98,10 +119,7 @@ CREATE POLICY "Users can manage own household"
 
 CREATE POLICY "Admins can view all households"
   ON households FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- =====================================================
 -- STEP 5: CREATE ADULTS POLICIES
@@ -116,10 +134,7 @@ CREATE POLICY "Users can manage own adults"
 
 CREATE POLICY "Admins can view all adults"
   ON adults FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- =====================================================
 -- STEP 6: CREATE CHILDREN POLICIES
@@ -134,10 +149,7 @@ CREATE POLICY "Users can manage own children"
 
 CREATE POLICY "Admins can view all children"
   ON children FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- =====================================================
 -- STEP 7: CREATE CATEGORIES POLICIES
@@ -152,10 +164,7 @@ CREATE POLICY "Users can manage own categories"
 
 CREATE POLICY "Admins can view all categories"
   ON categories FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- =====================================================
 -- STEP 8: CREATE EXPENSE_ITEMS POLICIES
@@ -170,10 +179,7 @@ CREATE POLICY "Users can manage own expense items"
 
 CREATE POLICY "Admins can view all expense items"
   ON expense_items FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- =====================================================
 -- STEP 9: CREATE PROMO_CODES POLICIES
@@ -187,10 +193,7 @@ CREATE POLICY "Anyone can read active promo codes"
 
 CREATE POLICY "Admins can manage promo codes"
   ON promo_codes FOR ALL
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- =====================================================
 -- STEP 10: CREATE ACTIVITY_LOG POLICIES
@@ -204,10 +207,7 @@ CREATE POLICY "Users can insert own activity"
 
 CREATE POLICY "Admins can read activity log"
   ON activity_log FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM profiles p 
-    WHERE p.id = auth.uid() AND p.is_admin = TRUE
-  ));
+  USING (public.is_admin());
 
 -- Allow system/triggers to insert (for signup trigger)
 CREATE POLICY "System can insert activity log"
