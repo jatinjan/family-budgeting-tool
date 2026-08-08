@@ -194,15 +194,18 @@ Production value example:
 
 **Responsibility:**
 
-1. Read `code` (or token params) from the request URL
-2. Exchange with Supabase for a session (SSR cookie client)
+1. Prefer `token_hash` + `type` → `verifyOtp` (works when email is opened on another device)
+2. Fallback: `code` → `exchangeCodeForSession` (PKCE / OAuth)
 3. On success → redirect to `/household`
 4. On failure → redirect to `/login?error=confirmation_failed`
 
 ```typescript
-// Pseudocode — implement with @supabase/ssr createServerClient
+// GET /auth/callback?token_hash=...&type=email  (preferred)
+if (token_hash && type) {
+  await supabase.auth.verifyOtp({ type, token_hash })
+  return redirect('/household')
+}
 // GET /auth/callback?code=...
-const code = requestUrl.searchParams.get('code')
 if (code) {
   await supabase.auth.exchangeCodeForSession(code)
   return redirect('/household')
@@ -223,7 +226,15 @@ return redirect('/login?error=confirmation_failed')
 | Redirect URLs | `https://mybalancedfamilyfinances.com/auth/callback` (explicit, optional if `/**` already covers it) |
 | Redirect URLs (test) | `https://family-budgeting-tool-one.vercel.app/**` |
 
-Also ensure the confirmation email template uses the default Supabase confirmation link (or custom template that still hits the Site URL / redirect allow list).
+**Authentication → Email Templates → Confirm signup:**
+
+Use the token-hash link (required for reliable PKCE / SSR confirmation). Replace the default `{{ .ConfirmationURL }}` button href with:
+
+```html
+<a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email">Confirm your email</a>
+```
+
+Without this template change, the default confirmation URL often fails `exchangeCodeForSession` when the user opens the email in a different browser or device.
 
 #### 1.6.5 Sign in before email confirmed
 
