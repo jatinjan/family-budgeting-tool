@@ -13,7 +13,9 @@ import {
   getPendingCount,
   getLastSyncTime,
   fullSync,
+  attachSyncWriteHooks,
 } from '@/lib/sync'
+import { subscribeToFamilyBudget } from '@/lib/realtime'
 import { useAuth } from '@/contexts/AuthContext'
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined)
@@ -71,6 +73,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   }, [syncState])
 
   useEffect(() => {
+    attachSyncWriteHooks()
+  }, [])
+
+  useEffect(() => {
     if (user && !initialSyncDone.current) {
       initialSyncDone.current = true
       setSyncState('PENDING')
@@ -81,6 +87,26 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user])
 
+  useEffect(() => {
+    if (!user) return
+
+    let pullTimer: ReturnType<typeof setTimeout> | null = null
+    const unsubscribe = subscribeToFamilyBudget(user.id, () => {
+      if (pullTimer) clearTimeout(pullTimer)
+      pullTimer = setTimeout(() => {
+        if (getSyncState() === 'SYNCING') return
+        void getPendingCount().then((count) => {
+          if (count > 0) return
+          void pullFromCloud({ silent: true })
+        })
+      }, 250)
+    })
+
+    return () => {
+      if (pullTimer) clearTimeout(pullTimer)
+      unsubscribe()
+    }
+  }, [user])
   const triggerSync = useCallback(async (): Promise<SyncResult> => {
     if (!user) {
       return { success: false, error: 'Not authenticated' }

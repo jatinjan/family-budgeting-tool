@@ -253,7 +253,7 @@ Map Supabase `email_not_confirmed` / “Email not confirmed” to that message i
 - [ ] Clicking the email confirmation link lands on `/auth/callback`, then `/household` while logged in
 - [ ] `emailRedirectTo` uses `NEXT_PUBLIC_APP_URL` + `/auth/callback`
 - [ ] Login before confirm shows a clear “confirm your email” message
-- [ ] Confirmed user can sign in later and reach `/household` / `/dashboard` normally
+- [ ] Confirmed user can sign in later and land on `/` (Balance)
 
 ---
 
@@ -266,7 +266,7 @@ Map Supabase `email_not_confirmed` / “Email not confirmed” to that message i
 ### 2.1 User Journey
 
 ```
-/login page → Enter credentials → Authenticate → Sync data → Redirect to /dashboard
+/login page → Enter credentials → Authenticate → Sync data → Redirect to / (Balance)
 ```
 
 
@@ -305,18 +305,9 @@ await supabase.rpc('log_activity', {
 // 5. Trigger sync from cloud to local
 await syncFromCloud();
 
-// 6. Redirect based on onboarding status
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('onboarding_status')
-  .eq('id', data.user.id)
-  .single();
-
-if (profile?.onboarding_status === 'plan_complete') {
-  router.push('/dashboard');
-} else {
-  router.push('/household');
-}
+// 6. Returning users land on Balance. Honor ?redirect= if it is a safe app path.
+const dest = safeInternalPath(searchParams.get('redirect'), '/')
+window.location.href = dest
 ```
 
 

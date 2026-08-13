@@ -31,6 +31,7 @@ import {
   ChevronRight,
   AlertCircle,
   RefreshCw,
+  ClipboardList,
 } from "lucide-react"
 
 const BRAND = {
@@ -563,14 +564,24 @@ export default function FamilyDetailPage({
                 {onboardingStatusBadge(profile.onboarding_status)}
               </div>
             </div>
-            <div className="text-sm text-gray-500 sm:text-right">
-              <div className="flex items-center gap-1.5 sm:justify-end">
-                <Calendar className="h-4 w-4" />
-                Signed up {formatDateShort(profile.signed_up_at)}
-              </div>
-              <div className="flex items-center gap-1.5 mt-1 sm:justify-end">
-                <Clock className="h-4 w-4" />
-                Last active {formatRelativeTime(profile.last_active_at)}
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <Button
+                onClick={() => router.push(`/admin/families/${id}/view/dashboard`)}
+                className="gap-2"
+                style={{ backgroundColor: BRAND.deepTeal }}
+              >
+                <ClipboardList className="h-4 w-4" />
+                Open consultation
+              </Button>
+              <div className="text-sm text-gray-500 sm:text-right">
+                <div className="flex items-center gap-1.5 sm:justify-end">
+                  <Calendar className="h-4 w-4" />
+                  Signed up {formatDateShort(profile.signed_up_at)}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 sm:justify-end">
+                  <Clock className="h-4 w-4" />
+                  Last active {formatRelativeTime(profile.last_active_at)}
+                </div>
               </div>
             </div>
           </div>

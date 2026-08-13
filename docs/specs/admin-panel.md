@@ -180,7 +180,17 @@ async function fetchFamilyDetail(userId: string) {
    - Each category shows: name, annual total, item count
    - Expanding shows item table (read-only)
 
-### 3.4 Read-Only Enforcement
+### 3.4 Open Consultation
+
+Primary CTA on the briefing header:
+
+```
+Open consultation → /admin/families/[id]/view/dashboard
+```
+
+Consultation is specified in [`admin-consultation-view.md`](./admin-consultation-view.md). The briefing page stays as the one-page coaching overview.
+
+### 3.5 Read-Only Enforcement
 
 Admin can only view, not edit. RLS policies enforce this:
 

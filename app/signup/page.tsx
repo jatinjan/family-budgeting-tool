@@ -464,32 +464,6 @@ export default function SignUpPage() {
                 />
               </div>
 
-              {/* Plan display - Founding Member only */}
-              <div className="space-y-2">
-                <Label style={{ color: BRAND.charcoal }}>Your plan</Label>
-                <div
-                  className="relative rounded-lg border-2 p-4 text-center border-[#2F6B66] bg-[#2F6B66]/5"
-                >
-                  <Star
-                    className="absolute top-2 right-2 h-4 w-4"
-                    style={{ color: "#8a6837" }}
-                  />
-                  <div
-                    className="text-sm font-medium mb-1"
-                    style={{ color: BRAND.charcoal }}
-                  >
-                    Founding Member
-                  </div>
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: BRAND.deepTeal }}
-                  >
-                    $0
-                  </div>
-                  <div className="text-xs text-gray-500">invite only</div>
-                </div>
-              </div>
-
               {/* Promo code */}
               <div className="space-y-2">
                 <Label htmlFor="promo" style={{ color: BRAND.charcoal }}>

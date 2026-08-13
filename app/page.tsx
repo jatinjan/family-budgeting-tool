@@ -16,11 +16,14 @@ export default function BalancePage() {
             <p className="text-base leading-relaxed text-foreground text-balance">
               A gentle, clear and easy way to understand your family&apos;s spending. Make intentional choices and create more space for what truly matters to you and your family.
             </p>
-            <Link href="/signup">
-              <Button size="lg" className="mt-6 gap-2">
-                Start planning
+            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Button asChild size="lg">
+                <Link href="/signup">Sign up</Link>
               </Button>
-            </Link>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/login">Sign in</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -114,18 +117,15 @@ export default function BalancePage() {
         </Card>
 
         {/* CTA */}
-        <div className="text-center space-y-3">
-          <Link href="/signup">
-            <Button size="lg" className="gap-2">
-              Start your plan
+        <div className="space-y-3 text-center">
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <Link href="/signup">Sign up</Link>
             </Button>
-          </Link>
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary underline underline-offset-4 hover:text-primary/80">
-              Sign in
-            </Link>
-          </p>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

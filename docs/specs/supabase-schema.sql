@@ -582,6 +582,24 @@ INSERT INTO promo_codes (code, description, max_redemptions, status) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- =====================================================
+-- REALTIME: live consultation + multi-device sync
+-- =====================================================
+DO $$
+DECLARE
+  tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['profiles', 'households', 'adults', 'children', 'categories', 'expense_items']
+  LOOP
+    BEGIN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', tbl);
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+      WHEN undefined_object THEN NULL;
+    END;
+  END LOOP;
+END $$;
+
+-- =====================================================
 -- VERIFICATION: Check tables were created
 -- =====================================================
 DO $$

@@ -461,8 +461,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       // Initial sync on auth
       fullSync(user.id);
       
-      // Subscribe to realtime changes (optional, v1.1)
-      subscribeToChanges(user.id);
+      subscribeToFamilyBudget(user.id, silentPull);
     }
   }, [user]);
   

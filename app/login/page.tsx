@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/AuthContext"
+import { POST_LOGIN_PATH, safeInternalPath } from "@/lib/config"
 import { Heart, Loader2, AlertCircle } from "lucide-react"
 
 const BRAND = {
@@ -44,13 +45,13 @@ function LoginPageContent() {
     }
   }, [searchParams])
 
-  // Redirect if already logged in
+  // Redirect if already logged in — Balance is the family home
   useEffect(() => {
     if (user && !authLoading) {
-      // Use hard redirect to ensure cookies are properly sent to middleware
-      window.location.href = "/household"
+      const dest = safeInternalPath(searchParams.get("redirect"), POST_LOGIN_PATH)
+      window.location.href = dest
     }
-  }, [user, authLoading])
+  }, [user, authLoading, searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

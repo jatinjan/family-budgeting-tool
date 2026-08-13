@@ -16,6 +16,25 @@ export const APP_CONFIG = {
   },
 } as const
 
+/** Family app home after sign-in (Balance tab). */
+export const POST_LOGIN_PATH = '/'
+
+/** First-time setup after signup / email confirmation. */
+export const POST_SIGNUP_PATH = '/household'
+
+/**
+ * Allow only same-origin app paths. Reject protocol-relative and off-site URLs.
+ */
+export function safeInternalPath(
+  value: string | null | undefined,
+  fallback: string = POST_LOGIN_PATH
+): string {
+  if (!value) return fallback
+  if (!value.startsWith('/')) return fallback
+  if (value.startsWith('//')) return fallback
+  return value
+}
+
 // Currency formatting helper
 export function formatCurrency(amount: number, showDecimals = true): string {
   return new Intl.NumberFormat(APP_CONFIG.CURRENCY.locale, {

@@ -16,6 +16,14 @@ import {
 } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import {
+  CHILD_FORWARD_PLANNING as childForwardPlanningCategories,
+  ADULT_FORWARD_PLANNING as adultForwardPlanningCategories,
+  HOUSEHOLD_FORWARD_PLANNING as householdForwardPlanningCategories,
+  CHILD_NEEDS_WANTS as childNeedsWantsCategory,
+  ADULT_NEEDS_WANTS as adultNeedsWantsCategory,
+  HOUSEHOLD_NEEDS_WANTS as householdNeedsWantsCategory,
+} from "@/lib/planning-categories"
 import { AlertCircle, ChevronDown, ChevronRight, Users, User, Home } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
@@ -259,18 +267,6 @@ export default function PlanningPage() {
     }))
     setSaving(false)
   }
-
-  // Children forward planning categories
-  const childForwardPlanningCategories = ["Education", "Medical & Special Needs", "Clothing & Toys", "Entertainment/Events", "Parties & Social"]
-  const childNeedsWantsCategory = "Extracurricular"
-
-  // Adult forward planning categories
-  const adultForwardPlanningCategories = ["Education", "Medical", "Vehicles/Transport", "Debt Repayment", "Personal", "Gifting"]
-  const adultNeedsWantsCategory = "Fitness"
-
-  // Household forward planning categories
-  const householdForwardPlanningCategories = ["Mortgage/Rent", "Utilities", "Scheduled Maintenance", "Insurance", "Groceries", "Entertainment", "Eating Out", "Pets"]
-  const householdNeedsWantsCategory = "Subscriptions"
 
   // Calculate totals for a child
   function calculateChildTotals(data: ChildPlanningData) {

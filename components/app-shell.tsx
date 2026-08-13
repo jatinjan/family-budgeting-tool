@@ -3,8 +3,10 @@
 import type React from "react"
 import { usePathname } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
+import { useAuth } from "@/contexts/AuthContext"
 
-function shouldShowUserChrome(pathname: string): boolean {
+function shouldShowUserChrome(pathname: string, isLoggedIn: boolean): boolean {
+  if (!isLoggedIn) return false
   if (pathname.startsWith("/admin")) return false
   if (pathname === "/login" || pathname === "/signup") return false
   if (pathname.startsWith("/auth/")) return false
@@ -13,7 +15,8 @@ function shouldShowUserChrome(pathname: string): boolean {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/"
-  const showUserChrome = shouldShowUserChrome(pathname)
+  const { user, loading } = useAuth()
+  const showUserChrome = shouldShowUserChrome(pathname, !loading && !!user)
 
   return (
     <>

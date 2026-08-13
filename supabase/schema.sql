@@ -326,3 +326,23 @@ CREATE INDEX IF NOT EXISTS idx_expense_items_user_id ON expense_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_expense_items_category_id ON expense_items(category_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_user_id ON activity_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
+
+-- =====================================================
+-- REALTIME: live consultation + multi-device sync
+-- Also enable Realtime on these tables in the Supabase dashboard
+-- if this publication does not exist yet.
+-- =====================================================
+DO $$
+DECLARE
+  tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['profiles', 'households', 'adults', 'children', 'categories', 'expense_items']
+  LOOP
+    BEGIN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', tbl);
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+      WHEN undefined_object THEN NULL;
+    END;
+  END LOOP;
+END $$;

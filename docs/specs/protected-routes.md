@@ -42,7 +42,8 @@ This spec defines route protection logic to ensure unauthenticated users cannot 
 | Route | Description | Redirect If Not Admin |
 |-------|-------------|----------------------|
 | `/admin` | Admin dashboard | `/dashboard` |
-| `/admin/families/[id]` | Family detail view | `/dashboard` |
+| `/admin/families/[id]` | Family briefing | `/dashboard` |
+| `/admin/families/[id]/view/*` | Family consultation (read-only) | `/dashboard` |
 
 ---
 

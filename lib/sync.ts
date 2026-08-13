@@ -3,11 +3,11 @@
  * Handles bidirectional sync between IndexedDB and Supabase
  */
 
-import { db, type Child, type Adult, type Household, type Category, type AdultCategory, type HouseholdCategory, type ExpenseItem, type AdultExpenseItem, type HouseholdExpenseItem, type SyncableFields } from './db';
+import { db, type SyncableFields } from './db';
 import { supabase } from './supabase';
 import type { SyncResult, SyncStatus, GlobalSyncState } from '@/types/sync';
 
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = 200;
 const MAX_RETRY_ATTEMPTS = 5;
 const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 60000;
@@ -15,6 +15,8 @@ const MAX_RETRY_DELAY_MS = 60000;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentSyncState: GlobalSyncState = 'LOCAL_ONLY';
 let syncStateListeners: Set<(state: GlobalSyncState) => void> = new Set();
+let syncLockDepth = 0;
+let syncQueuedDuringPush = false;
 
 export function getSyncState(): GlobalSyncState {
   return currentSyncState;
@@ -36,15 +38,77 @@ function getRetryDelay(attempt: number): number {
   return Math.min(delay + jitter, MAX_RETRY_DELAY_MS);
 }
 
+const SYNCABLE_TABLES = [
+  'children', 'adults', 'households',
+  'categories', 'adultCategories', 'householdCategories',
+  'items', 'adultItems', 'householdItems',
+] as const
+
+let writeHooksAttached = false
+
+export function attachSyncWriteHooks(): void {
+  if (writeHooksAttached || typeof window === 'undefined') return
+  writeHooksAttached = true
+
+  for (const tableName of SYNCABLE_TABLES) {
+    db.table(tableName).hook('creating', (_key, obj) => {
+      const record = obj as SyncableFields
+      if (record.syncStatus === 'SYNCED' || record.cloudId) {
+        return
+      }
+      record.syncStatus = 'PENDING'
+      record.lastModified = Date.now()
+      record.lastSynced = record.lastSynced ?? null
+      record.syncAttempts = record.syncAttempts ?? 0
+      record.cloudId = record.cloudId ?? null
+      queueSync()
+    })
+
+    db.table(tableName).hook('updating', (mods) => {
+      const changes = mods as Partial<SyncableFields> & Record<string, unknown>
+      const keys = Object.keys(changes)
+      const onlySyncMeta = keys.every((key) =>
+        ['syncStatus', 'lastSynced', 'syncAttempts', 'cloudId', 'lastModified'].includes(key)
+      )
+      if (onlySyncMeta || changes.syncStatus === 'SYNCED') {
+        return changes
+      }
+      queueSync()
+      return {
+        ...changes,
+        syncStatus: 'PENDING' as SyncStatus,
+        lastModified: Date.now(),
+      }
+    })
+  }
+}
+
+function beginSync(): void {
+  syncLockDepth += 1;
+}
+
+function endSync(): void {
+  syncLockDepth = Math.max(0, syncLockDepth - 1);
+  if (syncLockDepth === 0 && syncQueuedDuringPush) {
+    syncQueuedDuringPush = false;
+    queueSync();
+  }
+}
+
 export function queueSync(): void {
   if (debounceTimer) {
     clearTimeout(debounceTimer);
   }
 
   debounceTimer = setTimeout(async () => {
-    if (navigator.onLine && currentSyncState !== 'SYNCING') {
-      await pushToCloud();
+    if (!navigator.onLine) {
+      return;
     }
+    if (syncLockDepth > 0 || currentSyncState === 'SYNCING') {
+      syncQueuedDuringPush = true;
+      return;
+    }
+    await pushToCloud();
   }, DEBOUNCE_MS);
 }
 
@@ -73,7 +137,12 @@ async function getAllPendingRecords(): Promise<{
 
   for (const tableName of tables) {
     const pending = await db.table(tableName)
-      .filter((record: SyncableFields) => record.syncStatus === 'PENDING' || record.syncStatus === 'FAILED')
+      .filter((record: SyncableFields) =>
+        record.syncStatus === 'PENDING' ||
+        record.syncStatus === 'FAILED' ||
+        record.syncStatus === 'LOCAL_ONLY' ||
+        !record.syncStatus
+      )
       .toArray();
 
     if (pending.length > 0) {
@@ -96,17 +165,74 @@ export async function getPendingCount(): Promise<number> {
   return pending.reduce((sum, table) => sum + table.records.length, 0);
 }
 
-function mapLocalToCloud(
+const CLOUD_FREQUENCIES = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual', 'bi-monthly'] as const
+
+function mapFrequency(frequency: unknown): string {
+  if (typeof frequency === 'string' && CLOUD_FREQUENCIES.includes(frequency as typeof CLOUD_FREQUENCIES[number])) {
+    return frequency
+  }
+  return 'annual'
+}
+
+const PUSH_PHASES = [
+  ['households', 'adults', 'children'],
+  ['householdCategories', 'adultCategories', 'categories'],
+  ['householdItems', 'adultItems', 'items'],
+] as const
+
+async function getPendingForTable(tableName: string) {
+  return db.table(tableName)
+    .filter((record: SyncableFields) =>
+      record.syncStatus === 'PENDING' ||
+      record.syncStatus === 'FAILED' ||
+      record.syncStatus === 'LOCAL_ONLY' ||
+      !record.syncStatus
+    )
+    .toArray()
+}
+
+async function resolveParentCloudId(
+  table: string,
+  record: Record<string, unknown>
+): Promise<string | null> {
+  if (table === 'categories') {
+    const child = await db.children.get(record.childId as number)
+    return child?.cloudId ?? null
+  }
+  if (table === 'adultCategories') {
+    const adult = await db.adults.get(record.adultId as number)
+    return adult?.cloudId ?? null
+  }
+  if (table === 'householdCategories') {
+    const household = await db.households.get(record.householdId as number)
+    return household?.cloudId ?? null
+  }
+  if (table === 'items') {
+    const category = await db.categories.get(record.categoryId as number)
+    return category?.cloudId ?? null
+  }
+  if (table === 'adultItems') {
+    const category = await db.adultCategories.get(record.categoryId as number)
+    return category?.cloudId ?? null
+  }
+  if (table === 'householdItems') {
+    const category = await db.householdCategories.get(record.categoryId as number)
+    return category?.cloudId ?? null
+  }
+  return null
+}
+
+async function mapLocalToCloud(
   table: string,
   record: Record<string, unknown>,
   userId: string
-): Record<string, unknown> {
+): Promise<Record<string, unknown> | null> {
   const baseFields = {
     user_id: userId,
     updated_at: new Date().toISOString(),
-  };
+  }
 
-  const cloudIdField = record.cloudId ? { id: record.cloudId } : {};
+  const cloudIdField = record.cloudId ? { id: record.cloudId } : {}
 
   switch (table) {
     case 'children':
@@ -116,7 +242,7 @@ function mapLocalToCloud(
         name: record.name,
         age: record.age,
         school_level: record.schoolLevel,
-      };
+      }
 
     case 'adults':
       return {
@@ -124,7 +250,7 @@ function mapLocalToCloud(
         ...baseFields,
         name: record.name,
         age: record.age,
-      };
+      }
 
     case 'households':
       return {
@@ -133,65 +259,47 @@ function mapLocalToCloud(
         name: record.name,
         housing_type: record.housingType,
         members: record.members,
-      };
+      }
 
     case 'categories':
-      return {
-        ...cloudIdField,
-        ...baseFields,
-        entity_type: 'child',
-        entity_id: record.childCloudId,
-        name: record.name,
-        description: record.description,
-        is_percentage_based: record.isPercentageBased || false,
-        percentage_value: record.percentageValue || 15,
-        sort_order: record.order,
-      };
-
     case 'adultCategories':
+    case 'householdCategories': {
+      const entityId = await resolveParentCloudId(table, record)
+      if (!entityId) return null
       return {
         ...cloudIdField,
         ...baseFields,
-        entity_type: 'adult',
-        entity_id: record.adultCloudId,
+        entity_type: table === 'adultCategories' ? 'adult' : table === 'householdCategories' ? 'household' : 'child',
+        entity_id: entityId,
         name: record.name,
-        description: record.description,
+        description: record.description ?? null,
         is_percentage_based: record.isPercentageBased || false,
         percentage_value: record.percentageValue || 15,
-        sort_order: record.order,
-      };
-
-    case 'householdCategories':
-      return {
-        ...cloudIdField,
-        ...baseFields,
-        entity_type: 'household',
-        entity_id: record.householdCloudId,
-        name: record.name,
-        description: record.description,
-        is_percentage_based: record.isPercentageBased || false,
-        percentage_value: record.percentageValue || 15,
-        sort_order: record.order,
-      };
+        sort_order: record.order ?? 0,
+      }
+    }
 
     case 'items':
     case 'adultItems':
-    case 'householdItems':
+    case 'householdItems': {
+      const categoryId = await resolveParentCloudId(table, record)
+      if (!categoryId) return null
       return {
         ...cloudIdField,
         ...baseFields,
-        category_id: record.categoryCloudId,
+        category_id: categoryId,
         name: record.name,
-        cost: record.cost,
-        frequency: record.frequency,
-        quantity: record.quantity,
-        total: record.total,
-        need_want: record.needWant,
-        adjusted_total: record.adjustedTotal,
-      };
+        cost: record.cost ?? 0,
+        frequency: mapFrequency(record.frequency),
+        quantity: record.quantity ?? 1,
+        total: record.total ?? 0,
+        need_want: record.needWant ?? null,
+        adjusted_total: record.adjustedTotal ?? null,
+      }
+    }
 
     default:
-      return { ...cloudIdField, ...baseFields };
+      return { ...cloudIdField, ...baseFields }
   }
 }
 
@@ -201,77 +309,86 @@ export async function pushToCloud(): Promise<SyncResult> {
     return { success: false, error: 'Not authenticated' };
   }
 
-  const pendingByTable = await getAllPendingRecords();
-
-  if (pendingByTable.every(t => t.records.length === 0)) {
+  const pendingCount = await getPendingCount();
+  if (pendingCount === 0) {
     setSyncState('SYNCED');
     return { success: true, synced: 0 };
   }
 
+  beginSync();
   setSyncState('SYNCING');
   let syncedCount = 0;
   const errors: string[] = [];
 
   try {
-    for (const { table, records } of pendingByTable) {
-      for (const record of records) {
-        if (record.syncStatus === 'FAILED') {
-          const fullRecord = await db.table(table).get(record.id);
-          if (fullRecord && (fullRecord as SyncableFields).syncAttempts >= MAX_RETRY_ATTEMPTS) {
+    for (const phase of PUSH_PHASES) {
+      for (const table of phase) {
+        const records = await getPendingForTable(table);
+
+        for (const record of records) {
+          const fullRecord = record as SyncableFields & { id: number; cloudId?: string | null };
+          if (fullRecord.syncStatus === 'FAILED' && (fullRecord.syncAttempts || 0) >= MAX_RETRY_ATTEMPTS) {
             continue;
           }
-        }
 
-        const fullRecord = await db.table(table).get(record.id);
-        if (!fullRecord) continue;
-
-        const cloudTable = getCloudTableName(table);
-        const cloudRecord = mapLocalToCloud(table, fullRecord, user.id);
-
-        try {
-          if (record.cloudId) {
-            const { error } = await supabase
-              .from(cloudTable)
-              .update(cloudRecord)
-              .eq('id', record.cloudId);
-
-            if (error) throw error;
-          } else {
-            const { data, error } = await supabase
-              .from(cloudTable)
-              .insert(cloudRecord)
-              .select('id')
-              .single();
-
-            if (error) throw error;
-
-            await db.table(table).update(record.id, {
-              cloudId: data.id,
-            });
+          const cloudTable = getCloudTableName(table);
+          const cloudRecord = await mapLocalToCloud(table, fullRecord as unknown as Record<string, unknown>, user.id);
+          if (!cloudRecord) {
+            continue;
           }
 
-          await db.table(table).update(record.id, {
-            syncStatus: 'SYNCED' as SyncStatus,
-            lastSynced: Date.now(),
-            syncAttempts: 0,
-          });
+          try {
+            if (fullRecord.cloudId) {
+              const { error } = await supabase
+                .from(cloudTable)
+                .update(cloudRecord)
+                .eq('id', fullRecord.cloudId);
 
-          syncedCount++;
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          errors.push(`${table}[${record.id}]: ${errorMessage}`);
+              if (error) throw error;
+            } else {
+              const { data, error } = await supabase
+                .from(cloudTable)
+                .insert(cloudRecord)
+                .select('id')
+                .single();
 
-          await db.table(table).update(record.id, {
-            syncStatus: 'FAILED' as SyncStatus,
-            syncAttempts: ((fullRecord as SyncableFields).syncAttempts || 0) + 1,
-          });
+              if (error) throw error;
+
+              await db.table(table).update(fullRecord.id, {
+                cloudId: data.id,
+              });
+            }
+
+            await db.table(table).update(fullRecord.id, {
+              syncStatus: 'SYNCED' as SyncStatus,
+              lastSynced: Date.now(),
+              syncAttempts: 0,
+            });
+
+            syncedCount++;
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            errors.push(`${table}[${fullRecord.id}]: ${errorMessage}`);
+
+            await db.table(table).update(fullRecord.id, {
+              syncStatus: 'FAILED' as SyncStatus,
+              syncAttempts: (fullRecord.syncAttempts || 0) + 1,
+            });
+          }
         }
       }
     }
 
+    const remaining = await getPendingCount();
+
     if (errors.length > 0) {
       setSyncState('FAILED');
       return { success: false, synced: syncedCount, failed: errors.length, errors };
+    }
+
+    if (remaining > 0) {
+      setSyncState('PENDING');
+      return { success: true, synced: syncedCount };
     }
 
     setSyncState('SYNCED');
@@ -281,6 +398,8 @@ export async function pushToCloud(): Promise<SyncResult> {
     const errorMessage = err instanceof Error ? err.message : String(err);
     setSyncState('FAILED');
     return { success: false, error: errorMessage };
+  } finally {
+    endSync();
   }
 }
 
@@ -305,13 +424,20 @@ function getCloudTableName(localTable: string): string {
   }
 }
 
-export async function pullFromCloud(): Promise<SyncResult> {
+export async function pullFromCloud(options?: { silent?: boolean }): Promise<SyncResult> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, error: 'Not authenticated' };
   }
 
-  setSyncState('SYNCING');
+  if (options?.silent) {
+    if (currentSyncState === 'SYNCING' || (await getPendingCount()) > 0) {
+      return { success: true, synced: 0 };
+    }
+  } else {
+    beginSync();
+    setSyncState('SYNCING');
+  }
 
   try {
     const [
@@ -507,26 +633,43 @@ export async function pullFromCloud(): Promise<SyncResult> {
       }
     });
 
-    setSyncState('SYNCED');
+    if (!options?.silent) {
+      setSyncState('SYNCED');
+    }
     return { success: true };
 
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    setSyncState('FAILED');
+    if (!options?.silent) {
+      setSyncState('FAILED');
+    }
     return { success: false, error: errorMessage };
+  } finally {
+    if (!options?.silent) {
+      endSync();
+    }
   }
 }
 
 export async function fullSync(): Promise<SyncResult> {
-  const pushResult = await pushToCloud();
-  
-  if (!pushResult.success && !pushResult.synced) {
-    return pushResult;
+  beginSync();
+  try {
+    for (const tableName of SYNCABLE_TABLES) {
+      await db.table(tableName)
+        .filter((record: SyncableFields) => record.syncStatus === 'FAILED')
+        .modify({ syncStatus: 'PENDING' as SyncStatus, syncAttempts: 0 });
+    }
+
+    const pushResult = await pushToCloud();
+
+    if (!pushResult.success && !pushResult.synced) {
+      return pushResult;
+    }
+
+    return await pullFromCloud();
+  } finally {
+    endSync();
   }
-  
-  const pullResult = await pullFromCloud();
-  
-  return pullResult;
 }
 
 export async function retryFailedSync(): Promise<SyncResult> {
@@ -596,4 +739,8 @@ export async function getLastSyncTime(): Promise<Date | null> {
   }
 
   return latestSync ? new Date(latestSync) : null;
+}
+
+if (typeof window !== 'undefined') {
+  attachSyncWriteHooks();
 }

@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
   if (isPublicRoute(path)) {
     // If user is logged in and visiting login pages, redirect appropriately
     if (user && path === '/login') {
-      return NextResponse.redirect(new URL('/household', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
     if (user && path === '/admin/login') {
       // Check if admin
@@ -102,7 +102,7 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (!profile?.is_admin) {
-      return NextResponse.redirect(new URL('/household', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
   }
 

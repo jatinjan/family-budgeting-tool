@@ -22,6 +22,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`protected-routes.md`](./protected-routes.md) | Route protection, middleware, redirects | P0 |
 | [`budget-calculations.md`](./budget-calculations.md) | Frequency multipliers, category totals, planning mode | P0 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
+| [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |
 | [`data-migration.md`](./data-migration.md) | Migrate existing IndexedDB data on signup | P0 |
 | [`error-handling.md`](./error-handling.md) | Error categories, notifications, retry logic, boundaries | P1 |
 
@@ -72,7 +73,12 @@ These specifications provide detailed, actionable implementation guidance for bu
    - Users, promo codes, activity tabs
    - Family detail view
 
-8. **Error Handling** (`error-handling.md`)
+8. **Admin Consultation View** (`admin-consultation-view.md`)
+   - Read-only query hook for one family
+   - Consultation shell (banner + nav)
+   - Dashboard, planning, summary, profile, category displays
+
+9. **Error Handling** (`error-handling.md`)
    - Error boundaries
    - Toast notifications
    - Offline banner
@@ -158,6 +164,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `app/admin/families/[id]/page.tsx` — Real data
 - `app/admin/components/*.tsx` — Real queries
 
+### admin-consultation-view.md
+- `hooks/use-family-budget.ts` — Read-only family query
+- `contexts/ConsultationContext.tsx` — Consultation data provider
+- `lib/planning-categories.ts` — Shared planning category lists
+- `app/admin/families/[id]/view/**` — Consultation shell and screens
+- `app/admin/families/[id]/page.tsx` — Open consultation CTA
+
 ### data-migration.md
 - `lib/migration.ts` — Migration logic
 - `components/migration-prompt.tsx` — Migration dialog
@@ -180,6 +193,7 @@ After implementing all specs, verify:
 - [ ] Data persists across sessions
 - [ ] Offline edits sync when back online
 - [ ] Admin can view all users (read-only)
+- [ ] Admin can open a family's consultation view (same information, including drafts)
 - [ ] Admin can manage promo codes
 - [ ] Activity log shows real events
 - [ ] Errors handled gracefully with user feedback

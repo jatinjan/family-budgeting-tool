@@ -23,6 +23,14 @@ import { APP_CONFIG, formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
+import {
+  CHILD_FORWARD_PLANNING as childForwardPlanningCategories,
+  ADULT_FORWARD_PLANNING as adultForwardPlanningCategories,
+  HOUSEHOLD_FORWARD_PLANNING as householdForwardPlanningCategories,
+  CHILD_NEEDS_WANTS as childNeedsWantsCategory,
+  ADULT_NEEDS_WANTS as adultNeedsWantsCategory,
+  HOUSEHOLD_NEEDS_WANTS as householdNeedsWantsCategory,
+} from "@/lib/planning-categories"
 
 interface CategoryWithItems {
   category: Category | AdultCategory | HouseholdCategory
@@ -59,16 +67,6 @@ interface HouseholdSummary {
   wantTotal: number
   potentialSavings: number
 }
-
-// Forward planning categories
-const childForwardPlanningCategories = ["Education", "Medical & Special Needs", "Clothing & Toys", "Entertainment/Events", "Parties & Social"]
-const adultForwardPlanningCategories = ["Education", "Medical", "Vehicles/Transport", "Debt Repayment", "Personal", "Gifting"]
-const householdForwardPlanningCategories = ["Mortgage/Rent", "Utilities", "Scheduled Maintenance", "Insurance", "Groceries", "Entertainment", "Eating Out", "Pets"]
-
-// Needs/Wants categories
-const childNeedsWantsCategory = "Extracurricular"
-const adultNeedsWantsCategory = "Fitness"
-const householdNeedsWantsCategory = "Subscriptions"
 
 export default function SummaryPage() {
   const [childrenSummaries, setChildrenSummaries] = useState<ChildSummary[]>([])

@@ -38,7 +38,7 @@ export function useProtectedRoute(options: UseProtectedRouteOptions = {}): UsePr
     }
 
     if (requiredRole === 'admin' && !isAdmin) {
-      router.replace('/dashboard')
+      router.replace('/')
       setIsChecking(false)
       return
     }
@@ -62,7 +62,7 @@ export function useRequireAdmin() {
   return useProtectedRoute({ requiredRole: 'admin' })
 }
 
-export function useRedirectIfAuthenticated(redirectTo = '/dashboard') {
+export function useRedirectIfAuthenticated(redirectTo = '/') {
   const router = useRouter()
   const { user, loading } = useAuth()
 
