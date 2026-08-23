@@ -9,7 +9,7 @@ import {
   categoriesForEntity,
   itemsForCategory,
 } from '@/lib/consultation-totals'
-import { forwardPlanningNames, needsWantsName } from '@/lib/planning-categories'
+import { forwardPlanningNames, needsWantsNames } from '@/lib/planning-categories'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { Category, ExpenseItem } from '@/types/database'
 import { BRAND } from '../consultation-ui'
@@ -127,7 +127,7 @@ function EntityPlanningCard({
   }
 }) {
   const forwardNames = forwardPlanningNames(view.entityType)
-  const needsName = needsWantsName(view.entityType)
+  const needsNames = needsWantsNames(view.entityType)
 
   return (
     <Card>
@@ -146,7 +146,7 @@ function EntityPlanningCard({
         {view.categories.map((category) => {
           const items = itemsForCategory(view.items, category.id).filter((item) => item.cost > 0)
           const isForward = forwardNames.includes(category.name)
-          const isNeeds = category.name === needsName
+          const isNeeds = needsNames.includes(category.name)
           const isMisc = category.is_percentage_based
 
           if (!isMisc && items.length === 0) return null

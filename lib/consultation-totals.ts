@@ -1,4 +1,4 @@
-import { forwardPlanningNames, needsWantsName } from '@/lib/planning-categories'
+import { forwardPlanningNames, needsWantsNames } from '@/lib/planning-categories'
 import {
   calculateBudgetSummary,
   type BudgetSummary,
@@ -57,7 +57,7 @@ export function calculateEntityPlanningTotals(
   entityType: 'child' | 'adult' | 'household'
 ): EntityPlanningTotals {
   const forwardNames = forwardPlanningNames(entityType)
-  const needsName = needsWantsName(entityType)
+  const needsNames = needsWantsNames(entityType)
   const miscCategory = categories.find((category) => category.is_percentage_based)
   const miscPercentage = miscCategory?.percentage_value ?? 15
 
@@ -69,7 +69,7 @@ export function calculateEntityPlanningTotals(
   const miscCurrentSituation = (miscPercentage / 100) * nonMiscCurrentTotal
   const currentSituationTotal = nonMiscCurrentTotal + miscCurrentSituation
 
-  const needsTotal = itemsIn((category) => category.name === needsName)
+  const needsTotal = itemsIn((category) => needsNames.includes(category.name))
     .filter((item) => item.need_want === 'need')
     .reduce((sum, item) => sum + (item.adjusted_total ?? item.total), 0)
 
@@ -80,7 +80,7 @@ export function calculateEntityPlanningTotals(
   const forwardPlanningTotal = forwardPlanningItemsTotal + needsTotal + miscForwardPlanning
   const potentialSavings = currentSituationTotal - forwardPlanningTotal
 
-  const wantTotal = itemsIn((category) => category.name === needsName)
+  const wantTotal = itemsIn((category) => needsNames.includes(category.name))
     .filter((item) => item.need_want === 'want')
     .reduce((sum, item) => sum + (item.adjusted_total ?? item.total), 0)
 

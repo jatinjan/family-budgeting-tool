@@ -141,6 +141,20 @@ assert(
     fileHas('lib/consultation-totals.ts', '@/lib/planning-categories')
 )
 
+assert(
+  'Planning lists use budget category names from client feedback',
+  fileHas('lib/planning-categories.ts', "'Holiday'") &&
+    fileHas('lib/planning-categories.ts', 'Child Communication and Subscriptions') &&
+    fileHas('lib/planning-categories.ts', 'Personal Debt Repayment') &&
+    fileHas('lib/planning-categories.ts', 'Adult Holidays/ Solo Travel') &&
+    fileHas('lib/planning-categories.ts', 'Adult Communications & Subscriptions') &&
+    fileHas('lib/planning-categories.ts', "'Housing'") &&
+    fileHas('lib/planning-categories.ts', 'Groceries & Household Supplies') &&
+    fileHas('lib/planning-categories.ts', 'Entertainment & Recreation') &&
+    fileHas('lib/planning-categories.ts', 'Family Holidays') &&
+    fileHas('lib/planning-categories.ts', 'Communications & Subscriptions')
+)
+
 // --- Calculation fixture (same rules as family planning) ---
 
 const CHILD_FORWARD = ['Education', 'Medical & Special Needs', 'Clothing & Toys', 'Entertainment/Events', 'Parties & Social']

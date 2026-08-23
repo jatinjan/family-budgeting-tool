@@ -21,6 +21,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`sync-layer.md`](./sync-layer.md) | IndexedDB ↔ Supabase bidirectional sync with state machine | P0 |
 | [`protected-routes.md`](./protected-routes.md) | Route protection, middleware, redirects | P0 |
 | [`budget-calculations.md`](./budget-calculations.md) | Frequency multipliers, category totals, planning mode | P0 |
+| [`planning-sheet.md`](./planning-sheet.md) | Which Planning categories get Current/Forward vs Need/Want | P0 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
 | [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |
 | [`data-migration.md`](./data-migration.md) | Migrate existing IndexedDB data on signup | P0 |
@@ -164,10 +165,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `app/admin/families/[id]/page.tsx` — Real data
 - `app/admin/components/*.tsx` — Real queries
 
+### planning-sheet.md
+- `lib/planning-categories.ts` — Forward-planning and need/want category lists
+- `app/planning/page.tsx` — Family Planning layouts
+- `app/summary/page.tsx` — Same classification
+- `lib/consultation-totals.ts` — Shared planning totals
+
 ### admin-consultation-view.md
 - `hooks/use-family-budget.ts` — Read-only family query
 - `contexts/ConsultationContext.tsx` — Consultation data provider
-- `lib/planning-categories.ts` — Shared planning category lists
+- `lib/planning-categories.ts` — Shared planning category lists (see planning-sheet.md)
 - `app/admin/families/[id]/view/**` — Consultation shell and screens
 - `app/admin/families/[id]/page.tsx` — Open consultation CTA
 

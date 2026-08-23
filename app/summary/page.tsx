@@ -23,14 +23,7 @@ import { APP_CONFIG, formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
-import {
-  CHILD_FORWARD_PLANNING as childForwardPlanningCategories,
-  ADULT_FORWARD_PLANNING as adultForwardPlanningCategories,
-  HOUSEHOLD_FORWARD_PLANNING as householdForwardPlanningCategories,
-  CHILD_NEEDS_WANTS as childNeedsWantsCategory,
-  ADULT_NEEDS_WANTS as adultNeedsWantsCategory,
-  HOUSEHOLD_NEEDS_WANTS as householdNeedsWantsCategory,
-} from "@/lib/planning-categories"
+import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
 
 interface CategoryWithItems {
   category: Category | AdultCategory | HouseholdCategory
@@ -140,11 +133,11 @@ export default function SummaryPage() {
       for (const item of itemsWithCost) {
         nonMiscCurrentTotal += item.total
         
-        if (childForwardPlanningCategories.includes(category.name)) {
+        if (forwardPlanningNames("child").includes(category.name)) {
           nonMiscForwardPlanningTotal += item.adjustedTotal ?? item.total
         }
         
-        if (category.name === childNeedsWantsCategory && item.needWant === "need") {
+        if (needsWantsNames("child").includes(category.name) && item.needWant === "need") {
           extracurricularNeedsTotal += item.adjustedTotal ?? item.total
         }
       }
@@ -175,9 +168,9 @@ export default function SummaryPage() {
         const currentSituationTotal = itemsWithCost.reduce((sum, item) => sum + item.total, 0)
         
         let forwardPlanningTotal = 0
-        if (childForwardPlanningCategories.includes(category.name)) {
+        if (forwardPlanningNames("child").includes(category.name)) {
           forwardPlanningTotal = itemsWithCost.reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
-        } else if (category.name === childNeedsWantsCategory) {
+        } else if (needsWantsNames("child").includes(category.name)) {
           forwardPlanningTotal = itemsWithCost
             .filter((item) => item.needWant === "need")
             .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -185,7 +178,7 @@ export default function SummaryPage() {
           forwardPlanningTotal = currentSituationTotal
         }
         
-        const wantTotal = category.name === childNeedsWantsCategory
+        const wantTotal = needsWantsNames("child").includes(category.name)
           ? itemsWithCost
               .filter((item) => item.needWant === "want")
               .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -234,11 +227,11 @@ export default function SummaryPage() {
       for (const item of itemsWithCost) {
         nonMiscCurrentTotal += item.total
         
-        if (adultForwardPlanningCategories.includes(category.name)) {
+        if (forwardPlanningNames("adult").includes(category.name)) {
           nonMiscForwardPlanningTotal += item.adjustedTotal ?? item.total
         }
         
-        if (category.name === adultNeedsWantsCategory && item.needWant === "need") {
+        if (needsWantsNames("adult").includes(category.name) && item.needWant === "need") {
           fitnessNeedsTotal += item.adjustedTotal ?? item.total
         }
       }
@@ -268,9 +261,9 @@ export default function SummaryPage() {
         const currentSituationTotal = itemsWithCost.reduce((sum, item) => sum + item.total, 0)
         
         let forwardPlanningTotal = 0
-        if (adultForwardPlanningCategories.includes(category.name)) {
+        if (forwardPlanningNames("adult").includes(category.name)) {
           forwardPlanningTotal = itemsWithCost.reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
-        } else if (category.name === adultNeedsWantsCategory) {
+        } else if (needsWantsNames("adult").includes(category.name)) {
           forwardPlanningTotal = itemsWithCost
             .filter((item) => item.needWant === "need")
             .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -278,7 +271,7 @@ export default function SummaryPage() {
           forwardPlanningTotal = currentSituationTotal
         }
         
-        const wantTotal = category.name === adultNeedsWantsCategory
+        const wantTotal = needsWantsNames("adult").includes(category.name)
           ? itemsWithCost
               .filter((item) => item.needWant === "want")
               .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -327,11 +320,11 @@ export default function SummaryPage() {
       for (const item of itemsWithCost) {
         nonMiscCurrentTotal += item.total
         
-        if (householdForwardPlanningCategories.includes(category.name)) {
+        if (forwardPlanningNames("household").includes(category.name)) {
           nonMiscForwardPlanningTotal += item.adjustedTotal ?? item.total
         }
         
-        if (category.name === householdNeedsWantsCategory && item.needWant === "need") {
+        if (needsWantsNames("household").includes(category.name) && item.needWant === "need") {
           subscriptionsNeedsTotal += item.adjustedTotal ?? item.total
         }
       }
@@ -361,9 +354,9 @@ export default function SummaryPage() {
         const currentSituationTotal = itemsWithCost.reduce((sum, item) => sum + item.total, 0)
         
         let forwardPlanningTotal = 0
-        if (householdForwardPlanningCategories.includes(category.name)) {
+        if (forwardPlanningNames("household").includes(category.name)) {
           forwardPlanningTotal = itemsWithCost.reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
-        } else if (category.name === householdNeedsWantsCategory) {
+        } else if (needsWantsNames("household").includes(category.name)) {
           forwardPlanningTotal = itemsWithCost
             .filter((item) => item.needWant === "need")
             .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -371,7 +364,7 @@ export default function SummaryPage() {
           forwardPlanningTotal = currentSituationTotal
         }
         
-        const wantTotal = category.name === householdNeedsWantsCategory
+        const wantTotal = needsWantsNames("household").includes(category.name)
           ? itemsWithCost
               .filter((item) => item.needWant === "want")
               .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -545,9 +538,9 @@ export default function SummaryPage() {
   // Render category table for any entity type
   function renderCategoryTable(
     categoryData: CategoryWithItems,
-    needsWantsCategory: string
+    needsWantsCategories: string[]
   ) {
-    const isNeedsWantsCategory = categoryData.category.name === needsWantsCategory
+    const isNeedsWantsCategory = needsWantsCategories.includes(categoryData.category.name)
     const hasChanges = categoryData.potentialSavings !== 0 || categoryData.wantTotal > 0
 
     if (categoryData.category.isPercentageBased) {
@@ -824,7 +817,7 @@ export default function SummaryPage() {
                         <CardContent className="space-y-4">
                           {summary.categories.map((categoryData) => (
                             <div key={categoryData.category.id}>
-                              {renderCategoryTable(categoryData, childNeedsWantsCategory)}
+                              {renderCategoryTable(categoryData, needsWantsNames("child"))}
                             </div>
                           ))}
                         </CardContent>
@@ -881,7 +874,7 @@ export default function SummaryPage() {
                         <CardContent className="space-y-4">
                           {summary.categories.map((categoryData) => (
                             <div key={categoryData.category.id}>
-                              {renderCategoryTable(categoryData, adultNeedsWantsCategory)}
+                              {renderCategoryTable(categoryData, needsWantsNames("adult"))}
                             </div>
                           ))}
                         </CardContent>
@@ -937,7 +930,7 @@ export default function SummaryPage() {
                         <CardContent className="space-y-4">
                           {householdSummary.categories.map((categoryData) => (
                             <div key={categoryData.category.id}>
-                              {renderCategoryTable(categoryData, householdNeedsWantsCategory)}
+                              {renderCategoryTable(categoryData, needsWantsNames("household"))}
                             </div>
                           ))}
                         </CardContent>

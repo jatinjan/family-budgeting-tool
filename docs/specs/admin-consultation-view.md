@@ -233,41 +233,7 @@ All totals use [`budget-calculations.md`](./budget-calculations.md) and `lib/uti
 
 ### 6.1 Shared planning constants
 
-Customer `app/planning/page.tsx` and `app/summary/page.tsx` currently hard-code which categories are forward-planning vs need/want. Extract those lists into `lib/planning-categories.ts` and import from **both** the family pages and the consultation views so the numbers cannot drift.
-
-```typescript
-export const CHILD_FORWARD_PLANNING = [
-  'Education',
-  'Medical & Special Needs',
-  'Clothing & Toys',
-  'Entertainment/Events',
-  'Parties & Social',
-]
-
-export const ADULT_FORWARD_PLANNING = [
-  'Education',
-  'Medical',
-  'Vehicles/Transport',
-  'Debt Repayment',
-  'Personal',
-  'Gifting',
-]
-
-export const HOUSEHOLD_FORWARD_PLANNING = [
-  'Mortgage/Rent',
-  'Utilities',
-  'Scheduled Maintenance',
-  'Insurance',
-  'Groceries',
-  'Entertainment',
-  'Eating Out',
-  'Pets',
-]
-
-export const CHILD_NEEDS_WANTS = 'Extracurricular'
-export const ADULT_NEEDS_WANTS = 'Fitness'
-export const HOUSEHOLD_NEEDS_WANTS = 'Subscriptions'
-```
+Which categories use Current/Forward vs Need/Want is defined in [`planning-sheet.md`](./planning-sheet.md). Consultation imports `lib/planning-categories.ts`. Do not duplicate the name lists here.
 
 ---
 

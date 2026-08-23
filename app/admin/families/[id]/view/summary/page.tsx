@@ -12,7 +12,7 @@ import {
   categoriesForEntity,
   itemsForCategory,
 } from '@/lib/consultation-totals'
-import { forwardPlanningNames, needsWantsName } from '@/lib/planning-categories'
+import { forwardPlanningNames, needsWantsNames } from '@/lib/planning-categories'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { Category, ExpenseItem } from '@/types/database'
 import { BRAND } from '../consultation-ui'
@@ -170,10 +170,10 @@ function categoryForwardTotal(
 ): number {
   if (category.is_percentage_based) return totals.miscForwardPlanning
   const forwardNames = forwardPlanningNames(entityType)
-  const needsName = needsWantsName(entityType)
+  const needsNames = needsWantsNames(entityType)
 
   return categoryItems.reduce((sum, item) => {
-    if (category.name === needsName) {
+    if (needsNames.includes(category.name)) {
       return item.need_want === 'need' ? sum + (item.adjusted_total ?? item.total) : sum
     }
     if (forwardNames.includes(category.name)) {

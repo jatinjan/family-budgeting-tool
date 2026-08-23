@@ -16,14 +16,7 @@ import {
 } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
-import {
-  CHILD_FORWARD_PLANNING as childForwardPlanningCategories,
-  ADULT_FORWARD_PLANNING as adultForwardPlanningCategories,
-  HOUSEHOLD_FORWARD_PLANNING as householdForwardPlanningCategories,
-  CHILD_NEEDS_WANTS as childNeedsWantsCategory,
-  ADULT_NEEDS_WANTS as adultNeedsWantsCategory,
-  HOUSEHOLD_NEEDS_WANTS as householdNeedsWantsCategory,
-} from "@/lib/planning-categories"
+import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
 import { AlertCircle, ChevronDown, ChevronRight, Users, User, Home } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
@@ -81,7 +74,7 @@ export default function PlanningPage() {
       for (const category of categories) {
         const items = await db.items.where("categoryId").equals(category.id!).toArray()
         // Auto-set Extracurricular items with cost > 0 and no needWant to "need"
-        if (category.name === "Extracurricular") {
+        if (needsWantsNames("child").includes(category.name)) {
           for (const item of items) {
             if (item.cost > 0 && !item.needWant) {
               await db.items.update(item.id!, { needWant: "need" })
@@ -104,7 +97,7 @@ export default function PlanningPage() {
       for (const category of categories) {
         const items = await db.adultItems.where("categoryId").equals(category.id!).toArray()
         // Auto-set Fitness items to "need" by default (only if cost is 0 and needWant was "want" from old defaults)
-        if (category.name === "Fitness") {
+        if (needsWantsNames("adult").includes(category.name)) {
           for (const item of items) {
             if (item.cost === 0 && item.needWant === "want") {
               await db.adultItems.update(item.id!, { needWant: "need" })
@@ -130,7 +123,7 @@ export default function PlanningPage() {
       for (const category of categories) {
         const items = await db.householdItems.where("categoryId").equals(category.id!).toArray()
         // Auto-set Subscriptions items to "need" by default (only if cost is 0 and needWant was "want" from old defaults)
-        if (category.name === "Subscriptions") {
+        if (needsWantsNames("household").includes(category.name)) {
           for (const item of items) {
             if (item.cost === 0 && item.needWant === "want") {
               await db.householdItems.update(item.id!, { needWant: "need" })
@@ -281,13 +274,13 @@ export default function PlanningPage() {
     const currentSituationTotal = nonMiscCurrentTotal + miscCurrentSituation
 
     const needsTotal = data.categories
-      .filter(c => c.category.name === childNeedsWantsCategory)
+      .filter(c => needsWantsNames("child").includes(c.category.name))
       .flatMap(c => c.items)
       .filter(item => item.needWant === "need")
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
 
     const forwardPlanningItemsTotal = data.categories
-      .filter(c => childForwardPlanningCategories.includes(c.category.name))
+      .filter(c => forwardPlanningNames("child").includes(c.category.name))
       .flatMap(c => c.items)
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
 
@@ -296,7 +289,7 @@ export default function PlanningPage() {
     const potentialSavings = currentSituationTotal - forwardPlanningTotal
 
     const wantTotal = data.categories
-      .filter(c => c.category.name === childNeedsWantsCategory)
+      .filter(c => needsWantsNames("child").includes(c.category.name))
       .flatMap(c => c.items)
       .filter(item => item.needWant === "want")
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -317,13 +310,13 @@ export default function PlanningPage() {
     const currentSituationTotal = nonMiscCurrentTotal + miscCurrentSituation
 
     const needsTotal = data.categories
-      .filter(c => c.category.name === adultNeedsWantsCategory)
+      .filter(c => needsWantsNames("adult").includes(c.category.name))
       .flatMap(c => c.items)
       .filter(item => item.needWant === "need")
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
 
     const forwardPlanningItemsTotal = data.categories
-      .filter(c => adultForwardPlanningCategories.includes(c.category.name))
+      .filter(c => forwardPlanningNames("adult").includes(c.category.name))
       .flatMap(c => c.items)
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
 
@@ -332,7 +325,7 @@ export default function PlanningPage() {
     const potentialSavings = currentSituationTotal - forwardPlanningTotal
 
     const wantTotal = data.categories
-      .filter(c => c.category.name === adultNeedsWantsCategory)
+      .filter(c => needsWantsNames("adult").includes(c.category.name))
       .flatMap(c => c.items)
       .filter(item => item.needWant === "want")
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -353,13 +346,13 @@ export default function PlanningPage() {
     const currentSituationTotal = nonMiscCurrentTotal + miscCurrentSituation
 
     const needsTotal = data.categories
-      .filter(c => c.category.name === householdNeedsWantsCategory)
+      .filter(c => needsWantsNames("household").includes(c.category.name))
       .flatMap(c => c.items)
       .filter(item => item.needWant === "need")
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
 
     const forwardPlanningItemsTotal = data.categories
-      .filter(c => householdForwardPlanningCategories.includes(c.category.name))
+      .filter(c => forwardPlanningNames("household").includes(c.category.name))
       .flatMap(c => c.items)
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
 
@@ -368,7 +361,7 @@ export default function PlanningPage() {
     const potentialSavings = currentSituationTotal - forwardPlanningTotal
 
     const wantTotal = data.categories
-      .filter(c => c.category.name === householdNeedsWantsCategory)
+      .filter(c => needsWantsNames("household").includes(c.category.name))
       .flatMap(c => c.items)
       .filter(item => item.needWant === "want")
       .reduce((sum, item) => sum + (item.adjustedTotal ?? item.total), 0)
@@ -428,7 +421,7 @@ export default function PlanningPage() {
     entityType: "child" | "adult" | "household",
     entityId: number,
     forwardPlanningCategories: string[],
-    needsWantsCategory: string,
+    needsWantsCategories: string[],
     totals: ReturnType<typeof calculateChildTotals>,
     updateNeedWant: (itemId: number, needWant: "need" | "want", entityId: number) => void,
     updateAdjustment: (itemId: number, adjustedTotal: number, entityId: number) => void
@@ -437,7 +430,7 @@ export default function PlanningPage() {
     // Only show expense items that have an amount entered in the budget sheet
     const items = categoryData.items.filter((item) => item.cost > 0)
     const isForwardPlanningCategory = forwardPlanningCategories.includes(category.name)
-    const isNeedsWantsCategory = category.name === needsWantsCategory
+    const isNeedsWantsCategory = needsWantsCategories.includes(category.name)
     const isMiscellaneousCategory = category.isPercentageBased
 
     // Hide non-percentage categories that have no entered items
@@ -615,7 +608,7 @@ export default function PlanningPage() {
             This page gives you a calm, simple view of your family expenses so you can understand where your money is going today and explore how small, thoughtful changes could shape your year ahead.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            You can update any dollar amounts to reflect what you expect to spend. For specific categories (Extracurricular for children, Fitness for adults, Subscriptions for household), you can choose which items are true needs and which are wants.
+            You can update any dollar amounts to reflect what you expect to spend. For communication/subscription categories and Extracurricular, Fitness, you can choose which items are true needs and which are wants.
           </p>
         </div>
 
@@ -699,8 +692,8 @@ export default function PlanningPage() {
                               categoryData,
                               "child",
                               childData.child.id!,
-                              childForwardPlanningCategories,
-                              childNeedsWantsCategory,
+                              forwardPlanningNames("child"),
+                              needsWantsNames("child"),
                               totals,
                               updateChildItemNeedWant,
                               updateChildItemAdjustment
@@ -768,8 +761,8 @@ export default function PlanningPage() {
                               categoryData,
                               "adult",
                               adultData.adult.id!,
-                              adultForwardPlanningCategories,
-                              adultNeedsWantsCategory,
+                              forwardPlanningNames("adult"),
+                              needsWantsNames("adult"),
                               totals,
                               updateAdultItemNeedWant,
                               updateAdultItemAdjustment
@@ -837,8 +830,8 @@ export default function PlanningPage() {
                               categoryData,
                               "household",
                               householdData.household.id!,
-                              householdForwardPlanningCategories,
-                              householdNeedsWantsCategory,
+                              forwardPlanningNames("household"),
+                              needsWantsNames("household"),
                               totals,
                               updateHouseholdItemNeedWant,
                               updateHouseholdItemAdjustment
@@ -868,7 +861,7 @@ export default function PlanningPage() {
               <strong>Wants:</strong> Optional expenses that improve quality of life but are not essential
             </p>
             <p className="mt-2">
-              <strong>Needs/Wants Categories:</strong> Extracurricular (children), Fitness (adults), Subscriptions (household)
+              <strong>Needs/Wants Categories:</strong> Extracurricular and Child Communication (children); Fitness and Adult Communications (adults); Communications & Subscriptions (household)
             </p>
           </CardContent>
         </Card>
