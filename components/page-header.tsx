@@ -45,10 +45,10 @@ export function PageHeader() {
           </Button>
         </div>
       )}
-      <h1 className="mb-1 font-serif text-2xl font-bold text-balance text-primary">
+      <h1 className="mb-1 font-[family-name:var(--font-nunito)] text-[1.75rem] font-bold tracking-tight text-balance text-primary sm:text-3xl">
         {APP_CONFIG.APP_NAME}
       </h1>
-      <p className="text-sm text-muted-foreground text-balance">
+      <p className="text-sm font-normal text-muted-foreground text-balance">
         {APP_CONFIG.APP_TAGLINE}
       </p>
       {!loading && !user && (

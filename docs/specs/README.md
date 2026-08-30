@@ -25,6 +25,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`app-navigation.md`](./app-navigation.md) | Hybrid family nav: top bar desktop, bottom nav + Family sheet mobile | P0 |
 | [`balance-home.md`](./balance-home.md) | Balance `/` intention home (goals, saving intention) from client draft | P0 |
 | [`balance-intention-sync.md`](./balance-intention-sync.md) | Sync Balance goals to profiles + admin read-only view | P0 |
+| [`balance-type-polish.md`](./balance-type-polish.md) | Balance `/` MVP type hierarchy (Nunito display + Inter body) | P1 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
 | [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |
 | [`data-migration.md`](./data-migration.md) | Migrate existing IndexedDB data on signup | P0 |
@@ -191,6 +192,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `lib/supabase.ts` — `updateProfile` intention fields
 - `app/page.tsx` — Dual-write Dexie + Supabase
 - Consultation banner + family briefing — read-only intention
+
+### balance-type-polish.md
+- `components/page-header.tsx` — Nunito app name scale
+- `app/page.tsx` — Balance heading/body type classes only
+- `scripts/verify-balance-type-polish.mjs` — static checks
 
 ### admin-consultation-view.md
 - `hooks/use-family-budget.ts` — Read-only family query

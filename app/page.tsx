@@ -167,10 +167,10 @@ export default function BalancePage() {
 
         <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5 shadow-lg">
           <CardContent className="p-6 text-center">
-            <h2 className="mb-2 font-serif text-2xl font-semibold text-balance text-foreground">
+            <h2 className="mb-2 font-[family-name:var(--font-nunito)] text-2xl font-semibold text-balance text-foreground">
               Welcome to My Balanced Family Finances
             </h2>
-            <p className="mx-auto max-w-md text-base leading-relaxed text-balance text-muted-foreground">
+            <p className="mx-auto max-w-md text-base font-normal leading-relaxed text-balance text-muted-foreground">
               A clear space to understand your family&apos;s spending and create more balance in your
               life.
             </p>
@@ -179,10 +179,10 @@ export default function BalancePage() {
 
         <Card className="mb-6">
           <CardContent className="p-6">
-            <h2 className="font-serif text-xl font-semibold text-balance text-foreground">
+            <h2 className="font-[family-name:var(--font-nunito)] text-xl font-semibold text-balance text-foreground">
               &ldquo;What matters most to you this year?&rdquo;
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm font-normal text-muted-foreground">
               Choose the goal that feels most important right now:
             </p>
 
@@ -245,7 +245,7 @@ export default function BalancePage() {
             </div>
 
             <div className="mt-4">
-              <Label htmlFor="custom-goal" className="text-sm">
+              <Label htmlFor="custom-goal" className="text-sm font-medium">
                 In your own words
               </Label>
               <Input
@@ -265,18 +265,18 @@ export default function BalancePage() {
 
         <Card className="mb-6">
           <CardContent className="p-6">
-            <h2 className="font-serif text-xl font-semibold text-balance text-foreground">
+            <h2 className="font-[family-name:var(--font-nunito)] text-xl font-semibold text-balance text-foreground">
               Set your saving intention
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm font-normal text-muted-foreground">
               How much would you love to save or set aside this year?
             </p>
 
             <div className="mt-5 flex flex-col gap-4 sm:flex-row">
               <div className="flex-1">
-                <Label htmlFor="yearly-goal" className="text-sm">
+                <Label htmlFor="yearly-goal" className="text-sm font-medium">
                   Yearly savings goal{" "}
-                  <span className="text-muted-foreground">(optional)</span>
+                  <span className="font-normal text-muted-foreground">(optional)</span>
                 </Label>
                 <Input
                   id="yearly-goal"
@@ -290,8 +290,9 @@ export default function BalancePage() {
                 />
               </div>
               <div className="flex-1">
-                <Label htmlFor="monthly-buffer" className="text-sm">
-                  Monthly buffer <span className="text-muted-foreground">(optional)</span>
+                <Label htmlFor="monthly-buffer" className="text-sm font-medium">
+                  Monthly buffer{" "}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
                 </Label>
                 <Input
                   id="monthly-buffer"
@@ -326,7 +327,7 @@ export default function BalancePage() {
               </p>
             ) : null}
             {!isLoggedIn && !authLoading ? (
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-3 text-xs font-normal text-muted-foreground">
                 <Link
                   href="/signup"
                   className="text-primary underline underline-offset-4 hover:text-primary/80"
@@ -352,12 +353,14 @@ export default function BalancePage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <Sparkles className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="font-serif text-xl font-semibold text-foreground">How My BFF works</h2>
+              <h2 className="font-[family-name:var(--font-nunito)] text-xl font-semibold text-foreground">
+                How My BFF works
+              </h2>
             </div>
-            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+            <p className="mb-4 text-sm font-normal leading-relaxed text-muted-foreground">
               Now that your goals are set, here&apos;s your simple path forward:
             </p>
-            <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
+            <ol className="flex flex-col gap-3 text-sm font-normal text-muted-foreground">
               {BALANCE_HOW_IT_WORKS_STEPS.map((step, i) => (
                 <li key={step} className="flex items-start gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -370,7 +373,7 @@ export default function BalancePage() {
           </CardContent>
         </Card>
 
-        <p className="text-center font-serif text-lg text-balance text-foreground">
+        <p className="text-center font-[family-name:var(--font-nunito)] text-lg font-semibold text-balance text-foreground">
           A more balanced year begins with clarity.
         </p>
       </div>

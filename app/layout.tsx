@@ -46,7 +46,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className={`${nunito.variable} ${inter.variable} font-sans antialiased`}>
+      <body className={`${nunito.variable} ${inter.variable} font-[family-name:var(--font-inter)] antialiased`}>
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>
