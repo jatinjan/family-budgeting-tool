@@ -20,7 +20,10 @@ CREATE TABLE IF NOT EXISTS profiles (
     onboarding_status IN ('signed_up', 'profile_complete', 'budget_started', 'plan_complete')
   ),
   signed_up_at TIMESTAMPTZ DEFAULT NOW(),
-  last_active_at TIMESTAMPTZ DEFAULT NOW()
+  last_active_at TIMESTAMPTZ DEFAULT NOW(),
+  balance_goal TEXT,
+  yearly_savings_goal TEXT,
+  monthly_buffer TEXT
 );
 
 -- =====================================================

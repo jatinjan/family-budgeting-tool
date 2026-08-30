@@ -22,6 +22,9 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`protected-routes.md`](./protected-routes.md) | Route protection, middleware, redirects | P0 |
 | [`budget-calculations.md`](./budget-calculations.md) | Frequency multipliers, category totals, planning mode | P0 |
 | [`planning-sheet.md`](./planning-sheet.md) | Which Planning categories get Current/Forward vs Need/Want | P0 |
+| [`app-navigation.md`](./app-navigation.md) | Hybrid family nav: top bar desktop, bottom nav + Family sheet mobile | P0 |
+| [`balance-home.md`](./balance-home.md) | Balance `/` intention home (goals, saving intention) from client draft | P0 |
+| [`balance-intention-sync.md`](./balance-intention-sync.md) | Sync Balance goals to profiles + admin read-only view | P0 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
 | [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |
 | [`data-migration.md`](./data-migration.md) | Migrate existing IndexedDB data on signup | P0 |
@@ -170,6 +173,24 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `app/planning/page.tsx` — Family Planning layouts
 - `app/summary/page.tsx` — Same classification
 - `lib/consultation-totals.ts` — Shared planning totals
+
+### app-navigation.md
+- `lib/app-nav.ts` — Shared primary + Family IA
+- `components/top-nav.tsx` — Desktop top bar
+- `components/bottom-nav.tsx` — Mobile bottom nav
+- `components/family-nav-sheet.tsx` — Mobile Family sheet
+- `components/app-shell.tsx` — Hybrid chrome switch
+- `app/admin/families/[id]/view/components/consultation-nav.tsx` — Mirrored IA
+
+### balance-home.md
+- `lib/balance-home.ts` — Goals, how-it-works steps, setting keys
+- `app/page.tsx` — Balance intention home (replaces marketing draft)
+
+### balance-intention-sync.md
+- `supabase/migrations/20260830_balance_intention.sql` — profiles columns
+- `lib/supabase.ts` — `updateProfile` intention fields
+- `app/page.tsx` — Dual-write Dexie + Supabase
+- Consultation banner + family briefing — read-only intention
 
 ### admin-consultation-view.md
 - `hooks/use-family-budget.ts` — Read-only family query

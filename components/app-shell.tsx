@@ -3,6 +3,7 @@
 import type React from "react"
 import { usePathname } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
+import { TopNav } from "@/components/top-nav"
 import { useAuth } from "@/contexts/AuthContext"
 
 function shouldShowUserChrome(pathname: string, isLoggedIn: boolean): boolean {
@@ -20,12 +21,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {showUserChrome ? <TopNav /> : null}
       <div
-        className={showUserChrome ? "min-h-screen pb-20" : "min-h-screen"}
-        style={
+        className={
           showUserChrome
-            ? { paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }
-            : undefined
+            ? "min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+            : "min-h-screen"
         }
       >
         {children}

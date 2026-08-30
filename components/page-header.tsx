@@ -24,8 +24,9 @@ export function PageHeader() {
 
   return (
     <div className="relative mb-6 text-center">
+      {/* Mobile only — desktop Sign out lives on TopNav (see app-navigation.md) */}
       {!loading && user && (
-        <div className="absolute right-0 top-0">
+        <div className="absolute right-0 top-0 md:hidden">
           <Button
             type="button"
             variant="outline"

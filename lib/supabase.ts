@@ -76,6 +76,9 @@ export async function updateProfile(userId: string, updates: {
   family_name?: string
   onboarding_status?: string
   last_active_at?: string
+  balance_goal?: string | null
+  yearly_savings_goal?: string | null
+  monthly_buffer?: string | null
 }) {
   const { data, error } = await supabase
     .from('profiles')

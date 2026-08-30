@@ -22,6 +22,9 @@ export interface Database {
           onboarding_status: 'signed_up' | 'profile_complete' | 'budget_started' | 'plan_complete'
           signed_up_at: string
           last_active_at: string
+          balance_goal: string | null
+          yearly_savings_goal: string | null
+          monthly_buffer: string | null
         }
         Insert: {
           id: string
@@ -32,6 +35,9 @@ export interface Database {
           onboarding_status?: 'signed_up' | 'profile_complete' | 'budget_started' | 'plan_complete'
           signed_up_at?: string
           last_active_at?: string
+          balance_goal?: string | null
+          yearly_savings_goal?: string | null
+          monthly_buffer?: string | null
         }
         Update: {
           id?: string
@@ -42,6 +48,9 @@ export interface Database {
           onboarding_status?: 'signed_up' | 'profile_complete' | 'budget_started' | 'plan_complete'
           signed_up_at?: string
           last_active_at?: string
+          balance_goal?: string | null
+          yearly_savings_goal?: string | null
+          monthly_buffer?: string | null
         }
       }
       households: {

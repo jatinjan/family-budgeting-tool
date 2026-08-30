@@ -107,21 +107,22 @@ Always visible at the top of consultation screens:
 | Live | Green pulse when the Realtime channel is subscribed. |
 | Refresh | Button. Calls `refresh()` on the query hook. Disabled while loading. Fallback if Realtime is off. |
 | Back | Link to `/admin/families/[id]` |
+| Intention | Read-only Balance goal / savings from `profiles` when set — see [`balance-intention-sync.md`](./balance-intention-sync.md) |
 
 Banner copy must make it obvious this is not the admin's own budget.
 
 ### 4.3 Consultation nav
 
-Mirror the family app information architecture (not the marketing Balance tab):
+Mirror the family app information architecture from [`app-navigation.md`](./app-navigation.md) (not the marketing Balance tab). Balance is omitted in consultation.
 
-| Label | Route |
-|-------|-------|
-| Children | `.../view/children` (active also on `.../children/categories`) |
-| Adults | `.../view/adults` (active also on `.../adults/categories`) |
-| Household | `.../view/household` (active also on `.../household/categories`) |
+| Label | Behaviour |
+|-------|-----------|
+| Family | Group: Household → `.../view/household`, Children → `.../view/children`, Adults → `.../view/adults` (active also on each `.../categories` path) |
 | Dashboard | `.../view/dashboard` |
 | Planning | `.../view/planning` |
 | Summary | `.../view/summary` |
+
+Shared labels and family child order come from `lib/app-nav.ts`. Consultation remains a horizontal top-style nav for the admin workspace.
 
 From a profile screen, a secondary control opens that entity's categories (same relationship as `/children` → `/categories` in the family app).
 

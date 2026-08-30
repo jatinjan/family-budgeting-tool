@@ -8,6 +8,7 @@ import { budgetSummaryFromFamily } from '@/lib/consultation-totals'
 import type { FamilyBudget } from '@/hooks/use-family-budget'
 import { BRAND } from '../consultation-ui'
 import { OnboardingBadge } from './onboarding-badge'
+import { BalanceIntentionSummary } from '@/components/balance-intention-summary'
 
 export function ConsultationBanner({
   userId,
@@ -70,6 +71,11 @@ export function ConsultationBanner({
                 </p>
               )}
             </div>
+            <BalanceIntentionSummary
+              profile={data.profile}
+              compact
+              className="mt-3 max-w-xl"
+            />
           </div>
           <div className="flex items-center gap-2">
             <Button

@@ -91,12 +91,19 @@ CREATE TABLE IF NOT EXISTS profiles (
   signed_up_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Balance intention (see balance-intention-sync.md); also applied via migrations/20260830_balance_intention.sql
+  balance_goal TEXT,
+  yearly_savings_goal TEXT,
+  monthly_buffer TEXT
 );
 
 COMMENT ON TABLE profiles IS 'User profiles extending Supabase auth.users';
 COMMENT ON COLUMN profiles.onboarding_status IS 'Tracks user progress through onboarding';
 COMMENT ON COLUMN profiles.promo_code_used IS 'Attribution tracking for signups';
+COMMENT ON COLUMN profiles.balance_goal IS 'Balance home primary goal text';
+COMMENT ON COLUMN profiles.yearly_savings_goal IS 'Optional yearly savings intention (string)';
+COMMENT ON COLUMN profiles.monthly_buffer IS 'Optional monthly buffer intention (string)';
 
 -- -----------------------------------------------------
 -- households

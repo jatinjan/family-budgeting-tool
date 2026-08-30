@@ -33,6 +33,7 @@ import {
   RefreshCw,
   ClipboardList,
 } from "lucide-react"
+import { BalanceIntentionSummary } from "@/components/balance-intention-summary"
 
 const BRAND = {
   teal: "#63A8A3",
@@ -586,6 +587,21 @@ export default function FamilyDetailPage({
             </div>
           </div>
         </div>
+
+        <Card className="mb-6 border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle
+              className="font-[Nunito] text-lg font-semibold"
+              style={{ color: BRAND.deepTeal }}
+            >
+              Balance intention
+            </CardTitle>
+            <CardDescription>Read-only goals from the family Balance page</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BalanceIntentionSummary profile={profile} />
+          </CardContent>
+        </Card>
 
         <Card className="mb-6 border-gray-200 shadow-sm">
           <CardHeader>
