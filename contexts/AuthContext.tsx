@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = useCallback(async () => {
     if (user) {
       const profileData = await fetchProfile(user.id)
-      setProfile(profileData)
+      if (profileData) setProfile(profileData)
     }
   }, [user, fetchProfile])
 
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           const profileData = await fetchProfile(session.user.id)
-          setProfile(profileData)
+          if (profileData) setProfile(profileData)
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -69,8 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       
       if (session?.user) {
+        setProfile((prev) => (prev?.id === session.user.id ? prev : null))
         const profileData = await fetchProfile(session.user.id)
-        setProfile(profileData)
+        if (profileData) setProfile(profileData)
       } else {
         setProfile(null)
       }

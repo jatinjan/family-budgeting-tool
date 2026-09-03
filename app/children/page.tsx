@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { db, initializeChildData, type Child } from "@/lib/db"
 import { APP_CONFIG } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { Plus, Edit2, Trash2 } from "lucide-react"
 import {
   AlertDialog,
@@ -41,10 +42,13 @@ export default function HomePage() {
   useEffect(() => {
     loadChildren()
   }, [])
+  useReloadOnSync(loadChildren)
 
   async function loadChildren() {
     const allChildren = await db.children.toArray()
-    setChildren(allChildren.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
+    setChildren(
+      allChildren.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    )
   }
 
   function resetForm() {

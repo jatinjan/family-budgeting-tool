@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 
 import { db, initializeAdultData, type Adult } from "@/lib/db"
 import { PageHeader } from "@/components/page-header"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -38,10 +39,13 @@ export default function AdultsPage() {
   useEffect(() => {
     loadAdults()
   }, [])
+  useReloadOnSync(loadAdults)
 
   async function loadAdults() {
     const allAdults = await db.adults.toArray()
-    setAdults(allAdults.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
+    setAdults(
+      allAdults.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    )
   }
 
   function resetForm() {

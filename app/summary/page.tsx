@@ -21,6 +21,7 @@ import { Printer, Download, AlertCircle, Users, User, Home, ChevronDown, Chevron
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { APP_CONFIG, formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
 import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
@@ -71,6 +72,7 @@ export default function SummaryPage() {
   useEffect(() => {
     loadAllData()
   }, [])
+  useReloadOnSync(loadAllData)
 
   async function loadAllData() {
     setLoading(true)

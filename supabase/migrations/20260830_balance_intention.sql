@@ -9,3 +9,5 @@ ALTER TABLE profiles
 COMMENT ON COLUMN profiles.balance_goal IS 'Balance home primary goal text';
 COMMENT ON COLUMN profiles.yearly_savings_goal IS 'Optional yearly savings intention (string)';
 COMMENT ON COLUMN profiles.monthly_buffer IS 'Optional monthly buffer intention (string)';
+
+NOTIFY pgrst, 'reload schema';

@@ -131,4 +131,12 @@ Unchanged: no cloud write; Set intention → signup.
 2. `updateProfile` + Balance page dual-write/hydrate  
 3. Consultation + briefing UI  
 4. Verify script  
-5. Run migration on Supabase, then manual E2E  
+5. Run migration on Supabase, then manual E2E
+
+---
+
+## 8. Production notes (blank on re-login)
+
+Blank intention on a second device, profile fetch wipe, and PostgREST cache: **[`cross-device-sync-fix.md`](./cross-device-sync-fix.md)** §3.
+
+Goals remain single-select (intentional).  

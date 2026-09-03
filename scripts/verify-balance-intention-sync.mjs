@@ -15,6 +15,11 @@ const banner = readFileSync(
 const briefing = readFileSync(join(root, 'app/admin/families/[id]/page.tsx'), 'utf8')
 const summary = readFileSync(join(root, 'components/balance-intention-summary.tsx'), 'utf8')
 const readme = readFileSync(join(root, 'docs/specs/README.md'), 'utf8')
+const auth = readFileSync(join(root, 'contexts/AuthContext.tsx'), 'utf8')
+const updateFn = supabaseLib.slice(
+  supabaseLib.indexOf('export async function updateProfile'),
+  supabaseLib.indexOf('export async function isAdmin')
+)
 
 const failures = []
 const passes = []
@@ -40,6 +45,10 @@ assert('Consultation banner shows intention', banner.includes('BalanceIntentionS
 assert('Briefing shows intention', briefing.includes('BalanceIntentionSummary') && briefing.includes('Balance intention'))
 assert('Summary is read-only component', summary.includes('Read-only') || summary.includes('Intention'))
 assert('Spec says not via sync.ts', /does \*\*not\*\* go through|not go through `lib\/sync/i.test(spec) || spec.includes('lib/sync.ts'))
+assert('Blank re-login points at cross-device spec', spec.includes('cross-device-sync-fix.md'))
+assert('updateProfile does not use .single()', updateFn.includes('.select()') && !updateFn.includes('.single()'))
+assert('Save errors shown on Balance page', page.includes('setSaveError') && page.includes('could not sync to the cloud'))
+assert('Fetch error does not wipe signed-in profile', auth.includes('if (profileData) setProfile(profileData)') && auth.includes('return null'))
 
 console.log('')
 console.log(`${passes.length} passed, ${failures.length} failed`)

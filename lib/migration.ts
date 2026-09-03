@@ -6,6 +6,7 @@
 import { db } from './db'
 import { supabase } from './supabase'
 import { formatCurrency } from './utils/formatters'
+import { mapHousingTypeToCloud, mapSchoolLevelToCloud } from './sync-field-map'
 
 export interface LocalDataSummary {
   hasData: boolean
@@ -125,7 +126,7 @@ export async function migrateToCloud(userId: string): Promise<MigrationResult> {
         .insert({
           user_id: userId,
           name: householdData.name,
-          housing_type: householdData.housingType,
+          housing_type: mapHousingTypeToCloud(householdData.housingType),
           members: householdData.members || 1,
         })
         .select()
@@ -146,7 +147,7 @@ export async function migrateToCloud(userId: string): Promise<MigrationResult> {
           user_id: userId,
           name: child.name,
           age: child.age,
-          school_level: child.schoolLevel,
+          school_level: mapSchoolLevelToCloud(child.schoolLevel),
         })
         .select()
         .single()

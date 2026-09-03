@@ -496,3 +496,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 - [ ] Last sync timestamp displayed
 - [ ] Pending changes count displayed
 - [ ] Conflicts resolved via last-write-wins (MVP)
+
+---
+
+## 11. Production notes (cross-device)
+
+Cross-device adults-only sync, CHECK retries, always-pull, and list reload: **[`cross-device-sync-fix.md`](./cross-device-sync-fix.md)**.
+
+IndexedDB is still **not account-scoped**. Logout does not clear Dexie. Account switch on a shared device can mix local rows — follow-up, not this fix.

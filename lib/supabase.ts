@@ -85,8 +85,16 @@ export async function updateProfile(userId: string, updates: {
     .update(updates)
     .eq('id', userId)
     .select()
-    .single()
-  return { data, error }
+
+  if (error) return { data: null, error }
+  const row = data?.[0] ?? null
+  if (!row) {
+    return {
+      data: null,
+      error: { message: 'Profile was not updated. Try signing out and back in.' } as { message: string },
+    }
+  }
+  return { data: row, error: null }
 }
 
 // Check if user is admin

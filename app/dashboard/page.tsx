@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { db, calculateMiscellaneousTotal, type Child, type Adult, type Household } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 import { TrendingUp, DollarSign, Users, Home, User, AlertCircle } from "lucide-react"
 
@@ -67,6 +68,7 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData()
   }, [])
+  useReloadOnSync(loadData)
 
   async function loadData() {
     setLoading(true)

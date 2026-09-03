@@ -6,6 +6,16 @@
 import { db, type SyncableFields } from './db';
 import { supabase } from './supabase';
 import type { SyncResult, SyncStatus, GlobalSyncState } from '@/types/sync';
+import {
+  isCheckConstraintError,
+  isUniqueViolation,
+  mapFrequencyToCloud,
+  mapHousingTypeFromCloud,
+  mapHousingTypeToCloud,
+  mapSchoolLevelFromCloud,
+  mapSchoolLevelToCloud,
+  withCloudSafeFields,
+} from './sync-field-map';
 
 const DEBOUNCE_MS = 200;
 const MAX_RETRY_ATTEMPTS = 5;
@@ -165,13 +175,8 @@ export async function getPendingCount(): Promise<number> {
   return pending.reduce((sum, table) => sum + table.records.length, 0);
 }
 
-const CLOUD_FREQUENCIES = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual', 'bi-monthly'] as const
-
 function mapFrequency(frequency: unknown): string {
-  if (typeof frequency === 'string' && CLOUD_FREQUENCIES.includes(frequency as typeof CLOUD_FREQUENCIES[number])) {
-    return frequency
-  }
-  return 'annual'
+  return mapFrequencyToCloud(frequency)
 }
 
 const PUSH_PHASES = [
@@ -235,14 +240,17 @@ async function mapLocalToCloud(
   const cloudIdField = record.cloudId ? { id: record.cloudId } : {}
 
   switch (table) {
-    case 'children':
+    case 'children': {
+      const schoolLevel =
+        typeof record.schoolLevel === 'string' ? record.schoolLevel.trim() : ''
       return {
         ...cloudIdField,
         ...baseFields,
         name: record.name,
         age: record.age,
-        school_level: record.schoolLevel,
+        school_level: schoolLevel || mapSchoolLevelToCloud(record.schoolLevel),
       }
+    }
 
     case 'adults':
       return {
@@ -252,14 +260,17 @@ async function mapLocalToCloud(
         age: record.age,
       }
 
-    case 'households':
+    case 'households': {
+      const housingType =
+        typeof record.housingType === 'string' ? record.housingType.trim() : ''
       return {
         ...cloudIdField,
         ...baseFields,
         name: record.name,
-        housing_type: record.housingType,
+        housing_type: housingType || mapHousingTypeToCloud(record.housingType),
         members: record.members,
       }
+    }
 
     case 'categories':
     case 'adultCategories':
@@ -339,23 +350,15 @@ export async function pushToCloud(): Promise<SyncResult> {
 
           try {
             if (fullRecord.cloudId) {
-              const { error } = await supabase
-                .from(cloudTable)
-                .update(cloudRecord)
-                .eq('id', fullRecord.cloudId);
-
+              const { error } = await updateCloudRow(cloudTable, fullRecord.cloudId, table, cloudRecord);
               if (error) throw error;
             } else {
-              const { data, error } = await supabase
-                .from(cloudTable)
-                .insert(cloudRecord)
-                .select('id')
-                .single();
-
-              if (error) throw error;
-
+              const cloudId = await insertCloudRow(table, cloudTable, cloudRecord, user.id);
+              if (!cloudId) {
+                throw new Error('Insert returned no id');
+              }
               await db.table(table).update(fullRecord.id, {
-                cloudId: data.id,
+                cloudId,
               });
             }
 
@@ -401,6 +404,61 @@ export async function pushToCloud(): Promise<SyncResult> {
   } finally {
     endSync();
   }
+}
+
+async function updateCloudRow(
+  cloudTable: string,
+  cloudId: string,
+  localTable: string,
+  cloudRecord: Record<string, unknown>
+) {
+  const first = await supabase.from(cloudTable).update(cloudRecord).eq('id', cloudId);
+  if (!first.error) return first;
+  if (!isCheckConstraintError(first.error)) return first;
+  return supabase.from(cloudTable).update(withCloudSafeFields(localTable, cloudRecord)).eq('id', cloudId);
+}
+
+async function insertCloudRow(
+  localTable: string,
+  cloudTable: string,
+  cloudRecord: Record<string, unknown>,
+  userId: string
+): Promise<string | null> {
+  const first = await supabase.from(cloudTable).insert(cloudRecord).select('id').single();
+  if (!first.error && first.data?.id) return first.data.id as string;
+
+  let lastError = first.error;
+  if (first.error && isCheckConstraintError(first.error)) {
+    const retry = await supabase
+      .from(cloudTable)
+      .insert(withCloudSafeFields(localTable, cloudRecord))
+      .select('id')
+      .single();
+    if (!retry.error && retry.data?.id) return retry.data.id as string;
+    lastError = retry.error || first.error;
+  }
+
+  if (localTable === 'households' && lastError && isUniqueViolation(lastError)) {
+    const { data: existing, error: lookupError } = await supabase
+      .from('households')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (existing?.id) {
+      const { error: updError } = await updateCloudRow(
+        cloudTable,
+        existing.id,
+        localTable,
+        withCloudSafeFields(localTable, cloudRecord)
+      );
+      if (updError) throw updError;
+      return existing.id;
+    }
+  }
+
+  if (lastError) throw lastError;
+  return (first.data?.id as string) || null;
 }
 
 function getCloudTableName(localTable: string): string {
@@ -477,7 +535,7 @@ export async function pullFromCloud(options?: { silent?: boolean }): Promise<Syn
           const existing = await db.households.filter(r => r.cloudId === h.id).first();
           const localData = {
             name: h.name,
-            housingType: h.housing_type || '',
+            housingType: mapHousingTypeFromCloud(h.housing_type) || h.housing_type || '',
             members: h.members,
             createdAt: new Date(h.created_at),
             cloudId: h.id,
@@ -517,7 +575,7 @@ export async function pullFromCloud(options?: { silent?: boolean }): Promise<Syn
           const localData = {
             name: c.name,
             age: c.age || 0,
-            schoolLevel: c.school_level || '',
+            schoolLevel: mapSchoolLevelFromCloud(c.school_level) || c.school_level || '',
             createdAt: new Date(c.created_at),
             cloudId: c.id,
             ...syncMeta,
@@ -661,12 +719,24 @@ export async function fullSync(): Promise<SyncResult> {
     }
 
     const pushResult = await pushToCloud();
+    const pullResult = await pullFromCloud();
 
-    if (!pushResult.success && !pushResult.synced) {
-      return pushResult;
+    if (!pushResult.success) {
+      setSyncState('FAILED');
+      return {
+        success: false,
+        synced: (pushResult.synced || 0) + (pullResult.success ? 1 : 0),
+        failed: pushResult.failed,
+        errors: pushResult.errors,
+        error: pushResult.error,
+      };
     }
 
-    return await pullFromCloud();
+    if (!pullResult.success) {
+      return pullResult;
+    }
+
+    return pullResult;
   } finally {
     endSync();
   }

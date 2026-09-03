@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { AlertCircle, ChevronDown, ChevronRight, Users, User, Home } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
@@ -61,6 +62,7 @@ export default function PlanningPage() {
   useEffect(() => {
     loadAllData()
   }, [])
+  useReloadOnSync(loadAllData)
 
   async function loadAllData() {
     setLoading(true)

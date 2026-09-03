@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { db, initializeHouseholdData, type Household } from "@/lib/db"
 import { PageHeader } from "@/components/page-header"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -41,10 +42,13 @@ export default function HouseholdPage() {
   useEffect(() => {
     loadHouseholds()
   }, [])
+  useReloadOnSync(loadHouseholds)
 
   async function loadHouseholds() {
     const allHouseholds = await db.households.toArray()
-    setHouseholds(allHouseholds.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
+    setHouseholds(
+      allHouseholds.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    )
   }
 
   function resetForm() {

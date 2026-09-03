@@ -151,6 +151,11 @@ export default function BalancePage() {
       await refreshProfile()
       setIntentionSet(true)
       return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not save your intention. Try again."
+      setSaveError(message)
+      setIntentionSet(true)
+      return false
     } finally {
       setSaving(false)
     }

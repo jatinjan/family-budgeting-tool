@@ -20,6 +20,7 @@ import {
 import { formatCurrency } from "@/lib/config"
 import { syncToAdmin } from "@/lib/admin-sync"
 import { PageHeader } from "@/components/page-header"
+import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { ChevronLeft, Plus, Edit2, Trash2 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
@@ -69,6 +70,9 @@ function CategoriesPageContent() {
       loadData(Number.parseInt(childId))
     }
   }, [childId])
+  useReloadOnSync(() => {
+    if (childId) void loadData(Number.parseInt(childId))
+  })
 
   // Sync to admin panel whenever data changes (debounced)
   useEffect(() => {
