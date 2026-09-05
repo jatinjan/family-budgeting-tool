@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { APP_CONFIG, formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { useTabSnapshot } from "@/hooks/use-tab-snapshot"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
 import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
@@ -62,12 +63,23 @@ interface HouseholdSummary {
   potentialSavings: number
 }
 
+interface SummarySnapshot {
+  childrenSummaries: ChildSummary[]
+  adultsSummaries: AdultSummary[]
+  householdSummary: HouseholdSummary | null
+  openSectionIds: string[]
+}
+
 export default function SummaryPage() {
-  const [childrenSummaries, setChildrenSummaries] = useState<ChildSummary[]>([])
-  const [adultsSummaries, setAdultsSummaries] = useState<AdultSummary[]>([])
-  const [householdSummary, setHouseholdSummary] = useState<HouseholdSummary | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set())
+  const { snapshot, remember } = useTabSnapshot<SummarySnapshot>("summary")
+
+  const [childrenSummaries, setChildrenSummaries] = useState<ChildSummary[]>(snapshot?.childrenSummaries ?? [])
+  const [adultsSummaries, setAdultsSummaries] = useState<AdultSummary[]>(snapshot?.adultsSummaries ?? [])
+  const [householdSummary, setHouseholdSummary] = useState<HouseholdSummary | null>(snapshot?.householdSummary ?? null)
+  const [loading, setLoading] = useState(!snapshot)
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    () => new Set(snapshot?.openSectionIds ?? [])
+  )
 
   useEffect(() => {
     loadAllData()
@@ -100,17 +112,28 @@ export default function SummaryPage() {
 
     // Load household summary (only one)
     const households = await db.households.toArray()
+    let nextHouseholdSummary: HouseholdSummary | null = null
     if (households.length > 0) {
-      const summary = await loadHouseholdSummary(households[0])
-      setHouseholdSummary(summary)
+      nextHouseholdSummary = await loadHouseholdSummary(households[0])
     }
+    setHouseholdSummary(nextHouseholdSummary)
 
     // Open first section of each type by default
     const initialOpen = new Set<string>()
     if (childSummaries.length > 0) initialOpen.add(`child-${childSummaries[0].child.id}`)
     if (adultSummaries.length > 0) initialOpen.add(`adult-${adultSummaries[0].adult.id}`)
     if (households.length > 0) initialOpen.add(`household-${households[0].id}`)
-    setOpenSections(initialOpen)
+    const nextOpen = openSections.size > 0 ? openSections : initialOpen
+    if (nextOpen !== openSections) {
+      setOpenSections(nextOpen)
+    }
+
+    remember({
+      childrenSummaries: childSummaries,
+      adultsSummaries: adultSummaries,
+      householdSummary: nextHouseholdSummary,
+      openSectionIds: Array.from(nextOpen),
+    })
 
     setLoading(false)
   }

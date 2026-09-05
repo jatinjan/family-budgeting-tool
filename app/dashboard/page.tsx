@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { CategoryTotalBars, aggregateCategoryTotals } from "@/components/category-total-bars"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { useTabSnapshot } from "@/hooks/use-tab-snapshot"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { TrendingUp, DollarSign, Users, Home, User, AlertCircle } from "lucide-react"
 
@@ -25,6 +26,18 @@ interface EntityExpenseData {
   name: string
   total: number
   categories: CategoryData[]
+}
+
+interface DashboardSnapshot {
+  children: Child[]
+  adults: Adult[]
+  households: Household[]
+  childrenExpenseData: EntityExpenseData[]
+  adultsExpenseData: EntityExpenseData[]
+  householdsExpenseData: EntityExpenseData[]
+  selectedChildId: string
+  selectedAdultId: string
+  selectedHouseholdId: string
 }
 
 const COLORS = [
@@ -47,19 +60,21 @@ const ENTITY_COLORS = {
 }
 
 export default function DashboardPage() {
-  const [children, setChildren] = useState<Child[]>([])
-  const [adults, setAdults] = useState<Adult[]>([])
-  const [households, setHouseholds] = useState<Household[]>([])
+  const { snapshot, remember } = useTabSnapshot<DashboardSnapshot>("dashboard")
+
+  const [children, setChildren] = useState<Child[]>(snapshot?.children ?? [])
+  const [adults, setAdults] = useState<Adult[]>(snapshot?.adults ?? [])
+  const [households, setHouseholds] = useState<Household[]>(snapshot?.households ?? [])
   
-  const [childrenExpenseData, setChildrenExpenseData] = useState<EntityExpenseData[]>([])
-  const [adultsExpenseData, setAdultsExpenseData] = useState<EntityExpenseData[]>([])
-  const [householdsExpenseData, setHouseholdsExpenseData] = useState<EntityExpenseData[]>([])
+  const [childrenExpenseData, setChildrenExpenseData] = useState<EntityExpenseData[]>(snapshot?.childrenExpenseData ?? [])
+  const [adultsExpenseData, setAdultsExpenseData] = useState<EntityExpenseData[]>(snapshot?.adultsExpenseData ?? [])
+  const [householdsExpenseData, setHouseholdsExpenseData] = useState<EntityExpenseData[]>(snapshot?.householdsExpenseData ?? [])
   
-  const [selectedChildId, setSelectedChildId] = useState<string>("")
-  const [selectedAdultId, setSelectedAdultId] = useState<string>("")
-  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string>("")
+  const [selectedChildId, setSelectedChildId] = useState<string>(snapshot?.selectedChildId ?? "")
+  const [selectedAdultId, setSelectedAdultId] = useState<string>(snapshot?.selectedAdultId ?? "")
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string>(snapshot?.selectedHouseholdId ?? "")
   
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!snapshot)
 
   useEffect(() => {
     loadData()
@@ -215,6 +230,25 @@ export default function DashboardPage() {
       })
     }
     setHouseholdsExpenseData(householdExpenseData)
+
+    const nextChildId =
+      selectedChildId || (allChildren[0]?.id != null ? allChildren[0].id.toString() : "")
+    const nextAdultId =
+      selectedAdultId || (allAdults[0]?.id != null ? allAdults[0].id.toString() : "")
+    const nextHouseholdId =
+      selectedHouseholdId || (allHouseholds[0]?.id != null ? allHouseholds[0].id.toString() : "")
+
+    remember({
+      children: allChildren,
+      adults: allAdults,
+      households: allHouseholds,
+      childrenExpenseData: childExpenseData,
+      adultsExpenseData: adultExpenseData,
+      householdsExpenseData: householdExpenseData,
+      selectedChildId: nextChildId,
+      selectedAdultId: nextAdultId,
+      selectedHouseholdId: nextHouseholdId,
+    })
 
     setLoading(false)
   }

@@ -27,6 +27,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`balance-intention-sync.md`](./balance-intention-sync.md) | Sync Balance goals to profiles + admin read-only view | P0 |
 | [`cross-device-sync-fix.md`](./cross-device-sync-fix.md) | Adults-only sync + blank Balance intention on a second device | P0 |
 | [`dashboard-category-bars.md`](./dashboard-category-bars.md) | Full-width horizontal category totals on Dashboard (desktop + mobile) | P1 |
+| [`tab-switch-loading.md`](./tab-switch-loading.md) | Warm Dashboard / Planning / Summary tab switch: no full-page Dexie loader | P1 |
 | [`balance-type-polish.md`](./balance-type-polish.md) | Balance `/` MVP type hierarchy (Nunito display + Inter body) | P1 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
 | [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |
@@ -206,6 +207,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `hooks/use-reload-on-sync.ts` — list pages reload after sync
 - `supabase/migrations/20260901_sync_constraint_relax.sql` — ops SQL
 - `scripts/verify-cross-device-sync-fix.mjs` — static checks
+
+### tab-switch-loading.md
+- `docs/specs/tab-switch-loading.md` — Warm tab-switch loader contract
+- `hooks/use-tab-snapshot.ts` — In-memory last snapshot for Dashboard / Planning / Summary
+- `app/dashboard/page.tsx` — `loading` starts false when a snapshot exists
+- `app/planning/page.tsx` — Same
+- `app/summary/page.tsx` — Same
 
 ### balance-type-polish.md
 - `components/page-header.tsx` — Nunito app name scale

@@ -18,6 +18,7 @@ import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { useTabSnapshot } from "@/hooks/use-tab-snapshot"
 import { AlertCircle, ChevronDown, ChevronRight, Users, User, Home } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
@@ -51,13 +52,24 @@ interface HouseholdPlanningData {
   categories: HouseholdCategoryWithItems[]
 }
 
+interface PlanningSnapshot {
+  childrenData: ChildPlanningData[]
+  adultsData: AdultPlanningData[]
+  householdsData: HouseholdPlanningData[]
+  openSectionIds: string[]
+}
+
 export default function PlanningPage() {
-  const [childrenData, setChildrenData] = useState<ChildPlanningData[]>([])
-  const [adultsData, setAdultsData] = useState<AdultPlanningData[]>([])
-  const [householdsData, setHouseholdsData] = useState<HouseholdPlanningData[]>([])
-  const [loading, setLoading] = useState(true)
+  const { snapshot, remember } = useTabSnapshot<PlanningSnapshot>("planning")
+
+  const [childrenData, setChildrenData] = useState<ChildPlanningData[]>(snapshot?.childrenData ?? [])
+  const [adultsData, setAdultsData] = useState<AdultPlanningData[]>(snapshot?.adultsData ?? [])
+  const [householdsData, setHouseholdsData] = useState<HouseholdPlanningData[]>(snapshot?.householdsData ?? [])
+  const [loading, setLoading] = useState(!snapshot)
   const [saving, setSaving] = useState(false)
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set())
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    () => new Set(snapshot?.openSectionIds ?? [])
+  )
 
   useEffect(() => {
     loadAllData()
@@ -148,7 +160,17 @@ export default function PlanningPage() {
     if (childrenPlanningData.length > 0) initialOpen.add(`child-${childrenPlanningData[0].child.id}`)
     if (adultsPlanningData.length > 0) initialOpen.add(`adult-${adultsPlanningData[0].adult.id}`)
     if (householdsPlanningData.length > 0) initialOpen.add(`household-${householdsPlanningData[0].household.id}`)
-    setOpenSections(initialOpen)
+    const nextOpen = openSections.size > 0 ? openSections : initialOpen
+    if (nextOpen !== openSections) {
+      setOpenSections(nextOpen)
+    }
+
+    remember({
+      childrenData: childrenPlanningData,
+      adultsData: adultsPlanningData,
+      householdsData: householdsPlanningData,
+      openSectionIds: Array.from(nextOpen),
+    })
 
     setLoading(false)
   }
