@@ -85,16 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile])
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true)
     const { error } = await supabaseSignIn(email, password)
-    setLoading(false)
     return { error: error ? new Error(error.message) : null }
   }
 
   const signUp = async (email: string, password: string, metadata?: { family_name?: string; promo_code_used?: string }) => {
-    setLoading(true)
     const { data, error } = await supabaseSignUp(email, password, metadata)
-    setLoading(false)
     
     if (error) {
       return { error: new Error(error.message) }
