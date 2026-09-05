@@ -96,17 +96,18 @@ export default function HouseholdPage() {
   }
 
   async function confirmDelete() {
-    if (!deleteHousehold?.id) return
+    const household = deleteHousehold
+    if (!household?.id) return
 
     // Delete all related data
-    const categories = await db.householdCategories.where("householdId").equals(deleteHousehold.id).toArray()
+    const categories = await db.householdCategories.where("householdId").equals(household.id).toArray()
     for (const category of categories) {
       if (category.id) {
         await db.householdItems.where("categoryId").equals(category.id).delete()
       }
     }
-    await db.householdCategories.where("householdId").equals(deleteHousehold.id).delete()
-    await db.households.delete(deleteHousehold.id)
+    await db.householdCategories.where("householdId").equals(household.id).delete()
+    await db.households.delete(household.id)
 
     await loadHouseholds()
     setDeleteHousehold(null)
@@ -249,10 +250,21 @@ export default function HouseholdPage() {
                     <Button size="sm" variant="outline" onClick={() => setResetHousehold(household)} title="Reset budget categories">
                       <RefreshCw className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(household)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(household)}
+                      aria-label={`Edit household ${household.name}`}
+                    >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setDeleteHousehold(household)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDeleteHousehold(household)}
+                      aria-label={`Delete household ${household.name}`}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -287,7 +299,7 @@ export default function HouseholdPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteHousehold} onOpenChange={() => setDeleteHousehold(null)}>
+      <AlertDialog open={!!deleteHousehold} onOpenChange={(open) => { if (!open) setDeleteHousehold(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -298,7 +310,13 @@ export default function HouseholdPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

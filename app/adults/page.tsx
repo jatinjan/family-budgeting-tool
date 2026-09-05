@@ -91,17 +91,18 @@ export default function AdultsPage() {
   }
 
   async function confirmDelete() {
-    if (!deleteAdult?.id) return
+    const adult = deleteAdult
+    if (!adult?.id) return
 
     // Delete all related data
-    const categories = await db.adultCategories.where("adultId").equals(deleteAdult.id).toArray()
+    const categories = await db.adultCategories.where("adultId").equals(adult.id).toArray()
     for (const category of categories) {
       if (category.id) {
         await db.adultItems.where("categoryId").equals(category.id).delete()
       }
     }
-    await db.adultCategories.where("adultId").equals(deleteAdult.id).delete()
-    await db.adults.delete(deleteAdult.id)
+    await db.adultCategories.where("adultId").equals(adult.id).delete()
+    await db.adults.delete(adult.id)
 
     await loadAdults()
     setDeleteAdult(null)
@@ -223,10 +224,21 @@ export default function AdultsPage() {
                     <Button size="sm" variant="outline" onClick={() => setResetAdult(adult)} title="Reset budget categories">
                       <RefreshCw className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(adult)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(adult)}
+                      aria-label={`Edit adult ${adult.name}`}
+                    >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setDeleteAdult(adult)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDeleteAdult(adult)}
+                      aria-label={`Delete adult ${adult.name}`}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -261,7 +273,7 @@ export default function AdultsPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteAdult} onOpenChange={() => setDeleteAdult(null)}>
+      <AlertDialog open={!!deleteAdult} onOpenChange={(open) => { if (!open) setDeleteAdult(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -272,7 +284,13 @@ export default function AdultsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

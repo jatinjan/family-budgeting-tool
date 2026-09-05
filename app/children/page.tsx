@@ -96,17 +96,18 @@ export default function HomePage() {
   }
 
   async function confirmDelete() {
-    if (!deleteChild?.id) return
+    const child = deleteChild
+    if (!child?.id) return
 
     // Delete all related data
-    const categories = await db.categories.where("childId").equals(deleteChild.id).toArray()
+    const categories = await db.categories.where("childId").equals(child.id).toArray()
     for (const category of categories) {
       if (category.id) {
         await db.items.where("categoryId").equals(category.id).delete()
       }
     }
-    await db.categories.where("childId").equals(deleteChild.id).delete()
-    await db.children.delete(deleteChild.id)
+    await db.categories.where("childId").equals(child.id).delete()
+    await db.children.delete(child.id)
 
     await loadChildren()
     setDeleteChild(null)
@@ -228,10 +229,21 @@ export default function HomePage() {
                     <Button size="sm" onClick={() => viewChildBudget(child.id!)} className="gap-2">
                       View Budget
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(child)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(child)}
+                      aria-label={`Edit child ${child.name}`}
+                    >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setDeleteChild(child)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDeleteChild(child)}
+                      aria-label={`Delete child ${child.name}`}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -266,7 +278,7 @@ export default function HomePage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteChild} onOpenChange={() => setDeleteChild(null)}>
+      <AlertDialog open={!!deleteChild} onOpenChange={(open) => { if (!open) setDeleteChild(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -277,7 +289,13 @@ export default function HomePage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

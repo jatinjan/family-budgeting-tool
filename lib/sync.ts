@@ -381,17 +381,22 @@ export function attachSyncWriteHooks(): void {
       'deleting',
       (_key, obj: SyncableFields & { id?: number }, transaction: Transaction) => {
         if (internalMutationDepth > 0 || !activeOwnerUserId || !obj.cloudId) return
-        return transaction.table('syncQueue').add({
-          table: tableName,
-          operation: 'DELETE',
-          recordId: obj.id ?? -1,
-          cloudId: obj.cloudId,
-          ownerUserId: activeOwnerUserId,
-          expectedUpdatedAt: obj.serverUpdatedAt ?? null,
-          timestamp: Date.now(),
-          attempts: 0,
-          lastError: null,
-        })
+        return transaction
+          .table('syncQueue')
+          .add({
+            table: tableName,
+            operation: 'DELETE',
+            recordId: obj.id ?? -1,
+            cloudId: obj.cloudId,
+            ownerUserId: activeOwnerUserId,
+            expectedUpdatedAt: obj.serverUpdatedAt ?? null,
+            timestamp: Date.now(),
+            attempts: 0,
+            lastError: null,
+          })
+          .then(() => {
+            queueSync()
+          })
       },
     )
   }
@@ -582,18 +587,16 @@ async function processDeleteTombstones(
     }
 
     try {
-      if (!tombstone.expectedUpdatedAt) {
-        throw new VersionConflict(table, tombstone.recordId)
-      }
       await assertOwnerBoundary(userId)
-      const { data, error } = await syncCloud
+      let query = syncCloud
         .from(getCloudTableName(table))
         .delete()
         .eq('id', tombstone.cloudId)
         .eq('user_id', userId)
-        .eq('updated_at', tombstone.expectedUpdatedAt)
-        .select('id')
-        .maybeSingle()
+      if (tombstone.expectedUpdatedAt) {
+        query = query.eq('updated_at', tombstone.expectedUpdatedAt)
+      }
+      const { data, error } = await query.select('id').maybeSingle()
       if (error) throw error
       if (!data?.id) throw new VersionConflict(table, tombstone.recordId)
       await withInternalMutation(() => db.syncQueue.delete(tombstone.id as number))
@@ -919,14 +922,28 @@ function isUnresolved(record: SyncableFields): boolean {
   )
 }
 
+async function pendingDeleteKeys(userId: string | null): Promise<Set<string>> {
+  if (!userId) return new Set()
+  const rows = await db.syncQueue.where('ownerUserId').equals(userId).toArray()
+  return new Set(
+    rows
+      .filter((entry) => entry.operation === 'DELETE' && entry.cloudId && isLocalTable(entry.table))
+      .map((entry) => `${entry.table}:${entry.cloudId}`),
+  )
+}
+
 async function applyCloudSnapshot(
   snapshot: CloudSnapshot,
   counts: CycleCounts,
 ): Promise<SyncRowFailure[]> {
   const failures: SyncRowFailure[] = []
-  const householdIds = new Set(snapshot.households.map((row) => row.id))
-  const adultIds = new Set(snapshot.adults.map((row) => row.id))
-  const childIds = new Set(snapshot.children.map((row) => row.id))
+  const pendingDeletes = await pendingDeleteKeys(activeOwnerUserId)
+  const liveHouseholds = snapshot.households.filter((row) => !pendingDeletes.has(`households:${row.id}`))
+  const liveAdults = snapshot.adults.filter((row) => !pendingDeletes.has(`adults:${row.id}`))
+  const liveChildren = snapshot.children.filter((row) => !pendingDeletes.has(`children:${row.id}`))
+  const householdIds = new Set(liveHouseholds.map((row) => row.id))
+  const adultIds = new Set(liveAdults.map((row) => row.id))
+  const childIds = new Set(liveChildren.map((row) => row.id))
 
   const validCategories: CategoryRow[] = []
   const categoryTableById = new Map<string, LocalTable>()
@@ -937,6 +954,15 @@ async function applyCloudSnapshot(
         : category.entity_type === 'household'
           ? 'householdCategories'
           : 'categories'
+    const parentKey =
+      category.entity_type === 'adult'
+        ? `adults:${category.entity_id}`
+        : category.entity_type === 'household'
+          ? `households:${category.entity_id}`
+          : `children:${category.entity_id}`
+    if (pendingDeletes.has(`${localTable}:${category.id}`) || pendingDeletes.has(parentKey)) {
+      continue
+    }
     const valid =
       (category.entity_type === 'adult' && adultIds.has(category.entity_id)) ||
       (category.entity_type === 'household' && householdIds.has(category.entity_id)) ||
@@ -961,6 +987,16 @@ async function applyCloudSnapshot(
 
   const validItems: ItemRow[] = []
   for (const item of snapshot.items) {
+    if (
+      pendingDeletes.has(`items:${item.id}`) ||
+      pendingDeletes.has(`adultItems:${item.id}`) ||
+      pendingDeletes.has(`householdItems:${item.id}`) ||
+      pendingDeletes.has(`categories:${item.category_id}`) ||
+      pendingDeletes.has(`adultCategories:${item.category_id}`) ||
+      pendingDeletes.has(`householdCategories:${item.category_id}`)
+    ) {
+      continue
+    }
     const localTable = categoryTableById.get(item.category_id)
     if (!localTable) {
       counts.items.failed += 1
@@ -1072,7 +1108,7 @@ async function applyCloudSnapshot(
           counts[table].pulled += 1
         }
 
-        for (const household of snapshot.households) {
+        for (const household of liveHouseholds) {
           await upsert(
             'households',
             household.id,
@@ -1087,7 +1123,7 @@ async function applyCloudSnapshot(
             household.updated_at || null,
           )
         }
-        for (const adult of snapshot.adults) {
+        for (const adult of liveAdults) {
           await upsert(
             'adults',
             adult.id,
@@ -1096,7 +1132,7 @@ async function applyCloudSnapshot(
             adult.updated_at || null,
           )
         }
-        for (const child of snapshot.children) {
+        for (const child of liveChildren) {
           await upsert(
             'children',
             child.id,

@@ -153,9 +153,10 @@ function HouseholdCategoriesPageContent() {
   }
 
   async function confirmDeleteItem() {
-    if (!deleteItem?.id) return
+    const item = deleteItem
+    if (!item?.id) return
 
-    await db.householdItems.delete(deleteItem.id)
+    await db.householdItems.delete(item.id)
 
     if (householdId) {
       await loadData(Number.parseInt(householdId))
@@ -422,10 +423,20 @@ function HouseholdCategoriesPageContent() {
                               <p className="text-xs text-muted-foreground">per year</p>
                             </div>
                             <div className="flex gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => openEditItemDialog(item, category.id!)}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openEditItemDialog(item, category.id!)}
+                                aria-label={`Edit expense item ${item.name}`}
+                              >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => setDeleteItem(item)}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDeleteItem(item)}
+                                aria-label={`Delete expense item ${item.name}`}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -550,7 +561,7 @@ function HouseholdCategoriesPageContent() {
       </Dialog>
 
       {/* Delete Item Dialog */}
-      <AlertDialog open={!!deleteItem} onOpenChange={() => setDeleteItem(null)}>
+      <AlertDialog open={!!deleteItem} onOpenChange={(open) => { if (!open) setDeleteItem(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Expense Item?</AlertDialogTitle>
@@ -560,7 +571,13 @@ function HouseholdCategoriesPageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDeleteItem()
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
