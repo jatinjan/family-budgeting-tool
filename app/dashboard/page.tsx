@@ -94,16 +94,18 @@ export default function DashboardPage() {
     setAdults(allAdults)
     setHouseholds(allHouseholds)
 
-    // Set default selections
-    if (allChildren.length > 0 && !selectedChildId) {
-      setSelectedChildId(allChildren[0].id!.toString())
-    }
-    if (allAdults.length > 0 && !selectedAdultId) {
-      setSelectedAdultId(allAdults[0].id!.toString())
-    }
-    if (allHouseholds.length > 0 && !selectedHouseholdId) {
-      setSelectedHouseholdId(allHouseholds[0].id!.toString())
-    }
+    setSelectedChildId((current) => {
+      if (allChildren.some((child) => child.id?.toString() === current)) return current
+      return allChildren[0]?.id?.toString() ?? ""
+    })
+    setSelectedAdultId((current) => {
+      if (allAdults.some((adult) => adult.id?.toString() === current)) return current
+      return allAdults[0]?.id?.toString() ?? ""
+    })
+    setSelectedHouseholdId((current) => {
+      if (allHouseholds.some((household) => household.id?.toString() === current)) return current
+      return allHouseholds[0]?.id?.toString() ?? ""
+    })
 
     // Load children expense data
     const childExpenseData: EntityExpenseData[] = []

@@ -13,6 +13,8 @@ import { db, initializeHouseholdData, type Household } from "@/lib/db"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { toast } from "@/hooks/use-toast"
+import { clearTabSnapshots } from "@/hooks/use-tab-snapshot"
+import { withSyncWrite } from "@/lib/sync"
 import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -101,14 +103,17 @@ export default function HouseholdPage() {
     if (!household?.id) return
 
     try {
-      const categories = await db.householdCategories.where("householdId").equals(household.id).toArray()
-      for (const category of categories) {
-        if (category.id) {
-          await db.householdItems.where("categoryId").equals(category.id).delete()
+      await withSyncWrite(async () => {
+        const categories = await db.householdCategories.where("householdId").equals(household.id).toArray()
+        for (const category of categories) {
+          if (category.id) {
+            await db.householdItems.where("categoryId").equals(category.id).delete()
+          }
         }
-      }
-      await db.householdCategories.where("householdId").equals(household.id).delete()
-      await db.households.delete(household.id)
+        await db.householdCategories.where("householdId").equals(household.id).delete()
+        await db.households.delete(household.id)
+      })
+      clearTabSnapshots()
 
       await loadHouseholds()
       setDeleteHousehold(null)

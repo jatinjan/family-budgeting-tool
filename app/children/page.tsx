@@ -14,6 +14,8 @@ import { APP_CONFIG } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { toast } from "@/hooks/use-toast"
+import { clearTabSnapshots } from "@/hooks/use-tab-snapshot"
+import { withSyncWrite } from "@/lib/sync"
 import { Plus, Edit2, Trash2 } from "lucide-react"
 import {
   AlertDialog,
@@ -101,14 +103,17 @@ export default function HomePage() {
     if (!child?.id) return
 
     try {
-      const categories = await db.categories.where("childId").equals(child.id).toArray()
-      for (const category of categories) {
-        if (category.id) {
-          await db.items.where("categoryId").equals(category.id).delete()
+      await withSyncWrite(async () => {
+        const categories = await db.categories.where("childId").equals(child.id).toArray()
+        for (const category of categories) {
+          if (category.id) {
+            await db.items.where("categoryId").equals(category.id).delete()
+          }
         }
-      }
-      await db.categories.where("childId").equals(child.id).delete()
-      await db.children.delete(child.id)
+        await db.categories.where("childId").equals(child.id).delete()
+        await db.children.delete(child.id)
+      })
+      clearTabSnapshots()
 
       await loadChildren()
       setDeleteChild(null)

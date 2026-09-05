@@ -14,6 +14,10 @@ export function rememberTabSnapshot<T>(key: string, value: T): void {
   snapshots.set(key, value)
 }
 
+export function clearTabSnapshots(): void {
+  snapshots.clear()
+}
+
 export function useTabSnapshot<T>(key: string): {
   snapshot: T | undefined
   remember: (value: T) => void

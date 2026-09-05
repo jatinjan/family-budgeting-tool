@@ -23,6 +23,8 @@ import { syncToAdmin } from "@/lib/admin-sync"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { toast } from "@/hooks/use-toast"
+import { clearTabSnapshots } from "@/hooks/use-tab-snapshot"
+import { withSyncWrite } from "@/lib/sync"
 import { ChevronLeft, Plus, Edit2, Trash2 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
@@ -158,7 +160,10 @@ function AdultCategoriesPageContent() {
     if (!item?.id) return
 
     try {
-      await db.adultItems.delete(item.id)
+      await withSyncWrite(async () => {
+        await db.adultItems.delete(item.id)
+      })
+      clearTabSnapshots()
 
       if (adultId) {
         await loadData(Number.parseInt(adultId))

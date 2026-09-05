@@ -377,28 +377,34 @@ export function attachSyncWriteHooks(): void {
       }
     })
 
-    db.table(tableName).hook(
-      'deleting',
-      (_key, obj: SyncableFields & { id?: number }, transaction: Transaction) => {
-        if (internalMutationDepth > 0 || !activeOwnerUserId || !obj.cloudId) return
-        return transaction
-          .table('syncQueue')
-          .add({
-            table: tableName,
-            operation: 'DELETE',
-            recordId: obj.id ?? -1,
-            cloudId: obj.cloudId,
-            ownerUserId: activeOwnerUserId,
-            expectedUpdatedAt: obj.serverUpdatedAt ?? null,
-            timestamp: Date.now(),
-            attempts: 0,
-            lastError: null,
-          })
-          .then(() => {
-            queueSync()
-          })
-      },
-    )
+    db.table(tableName).hook('deleting', function (
+      this: { onsuccess?: (() => void) | null },
+      _key,
+      obj: SyncableFields & { id?: number },
+      transaction: Transaction,
+    ) {
+      if (internalMutationDepth > 0 || !activeOwnerUserId || !obj.cloudId) return
+      const tombstone = {
+        table: tableName,
+        operation: 'DELETE' as const,
+        recordId: obj.id ?? -1,
+        cloudId: obj.cloudId,
+        ownerUserId: activeOwnerUserId,
+        expectedUpdatedAt: obj.serverUpdatedAt ?? null,
+        timestamp: Date.now(),
+        attempts: 0,
+        lastError: null,
+      }
+      try {
+        return transaction.table('syncQueue').add(tombstone)
+      } catch {
+        // db.items.delete() / where().delete() only open that one table.
+        // Queue the tombstone after commit so the local delete is not aborted.
+        this.onsuccess = () => {
+          void db.syncQueue.add(tombstone).then(() => queueSync())
+        }
+      }
+    })
   }
 }
 
@@ -412,6 +418,17 @@ export function queueSync(): void {
       void reconcileBudget('local-write')
     }
   }, DEBOUNCE_MS)
+}
+
+/** User deletes must include syncQueue so the deleting hook can write tombstones. */
+export async function withSyncWrite<T>(work: () => Promise<T>): Promise<T> {
+  const result = await db.transaction(
+    'rw',
+    [...SYNCABLE_TABLES.map((table) => db.table(table)), db.syncQueue],
+    work,
+  )
+  queueSync()
+  return result
 }
 
 export async function markRecordPending<T extends Partial<SyncableFields>>(

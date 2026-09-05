@@ -13,6 +13,8 @@ import { db, initializeAdultData, type Adult } from "@/lib/db"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { toast } from "@/hooks/use-toast"
+import { clearTabSnapshots } from "@/hooks/use-tab-snapshot"
+import { withSyncWrite } from "@/lib/sync"
 import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -96,14 +98,17 @@ export default function AdultsPage() {
     if (!adult?.id) return
 
     try {
-      const categories = await db.adultCategories.where("adultId").equals(adult.id).toArray()
-      for (const category of categories) {
-        if (category.id) {
-          await db.adultItems.where("categoryId").equals(category.id).delete()
+      await withSyncWrite(async () => {
+        const categories = await db.adultCategories.where("adultId").equals(adult.id).toArray()
+        for (const category of categories) {
+          if (category.id) {
+            await db.adultItems.where("categoryId").equals(category.id).delete()
+          }
         }
-      }
-      await db.adultCategories.where("adultId").equals(adult.id).delete()
-      await db.adults.delete(adult.id)
+        await db.adultCategories.where("adultId").equals(adult.id).delete()
+        await db.adults.delete(adult.id)
+      })
+      clearTabSnapshots()
 
       await loadAdults()
       setDeleteAdult(null)
