@@ -26,6 +26,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`balance-home.md`](./balance-home.md) | Balance `/` intention home (goals, saving intention) from client draft | P0 |
 | [`balance-intention-sync.md`](./balance-intention-sync.md) | Sync Balance goals to profiles + admin read-only view | P0 |
 | [`cross-device-sync-fix.md`](./cross-device-sync-fix.md) | Adults-only sync + blank Balance intention on a second device | P0 |
+| [`dashboard-category-bars.md`](./dashboard-category-bars.md) | Full-width horizontal category totals on Dashboard (desktop + mobile) | P1 |
 | [`balance-type-polish.md`](./balance-type-polish.md) | Balance `/` MVP type hierarchy (Nunito display + Inter body) | P1 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
 | [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |

@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { db, calculateMiscellaneousTotal, type Child, type Adult, type Household } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import { CategoryTotalBars, aggregateCategoryTotals } from "@/components/category-total-bars"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { TrendingUp, DollarSign, Users, Home, User, AlertCircle } from "lucide-react"
 
 interface CategoryData {
@@ -24,11 +25,6 @@ interface EntityExpenseData {
   name: string
   total: number
   categories: CategoryData[]
-}
-
-interface StackedBarData {
-  category: string
-  [key: string]: string | number
 }
 
 const COLORS = [
@@ -236,39 +232,13 @@ export default function DashboardPage() {
     { name: "Household", value: totalHousehold, color: ENTITY_COLORS.household },
   ].filter(item => item.value > 0)
 
-  // Generate stacked bar data for children
-  const childrenStackedData = (): StackedBarData[] => {
-    const allCategories = new Set<string>()
-    childrenExpenseData.forEach(child => {
-      child.categories.forEach(cat => allCategories.add(cat.name))
-    })
-    
-    return Array.from(allCategories).map(category => {
-      const dataPoint: StackedBarData = { category }
-      childrenExpenseData.forEach(child => {
-        const cat = child.categories.find(c => c.name === category)
-        dataPoint[child.name] = cat ? cat.value : 0
-      })
-      return dataPoint
-    })
-  }
-
-  // Generate stacked bar data for adults
-  const adultsStackedData = (): StackedBarData[] => {
-    const allCategories = new Set<string>()
-    adultsExpenseData.forEach(adult => {
-      adult.categories.forEach(cat => allCategories.add(cat.name))
-    })
-    
-    return Array.from(allCategories).map(category => {
-      const dataPoint: StackedBarData = { category }
-      adultsExpenseData.forEach(adult => {
-        const cat = adult.categories.find(c => c.name === category)
-        dataPoint[adult.name] = cat ? cat.value : 0
-      })
-      return dataPoint
-    })
-  }
+  const childrenBars = aggregateCategoryTotals(childrenExpenseData)
+  const adultsBars = aggregateCategoryTotals(adultsExpenseData)
+  const householdBars = aggregateCategoryTotals(householdsExpenseData)
+  const householdCaption =
+    households.length === 1 && households[0]?.name
+      ? households[0].name
+      : "Shared household costs"
 
   // Selected entity data for drill-down
   const selectedChildData = childrenExpenseData.find((data) => data.id.toString() === selectedChildId)
@@ -422,159 +392,45 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Stacked Bar Charts Section */}
-        <div className="grid gap-6 lg:grid-cols-2 mb-6">
-          {/* Children Stacked Bar Chart */}
-          {childrenExpenseData.length > 0 && childrenExpenseData.some(c => c.total > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" style={{ color: ENTITY_COLORS.children }} />
-                  Children by Category
-                </CardTitle>
-                <CardDescription>Category breakdown across all children</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={childrenStackedData()} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="category"
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={0}
-                      height={100}
-                    />
-                    <YAxis
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                      width={60}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                    />
-                    <Legend />
-                    {childrenExpenseData.map((child, index) => (
-                      <Bar
-                        key={child.id}
-                        dataKey={child.name}
-                        stackId="a"
-                        fill={COLORS[index % COLORS.length]}
-                        radius={index === childrenExpenseData.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Adults Stacked Bar Chart */}
-          {adultsExpenseData.length > 0 && adultsExpenseData.some(a => a.total > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" style={{ color: ENTITY_COLORS.adults }} />
-                  Adults by Category
-                </CardTitle>
-                <CardDescription>Category breakdown across all adults</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={adultsStackedData()} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="category"
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={0}
-                      height={100}
-                    />
-                    <YAxis
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                      tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                      width={60}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                    />
-                    <Legend />
-                    {adultsExpenseData.map((adult, index) => (
-                      <Bar
-                        key={adult.id}
-                        dataKey={adult.name}
-                        stackId="a"
-                        fill={COLORS[(index + 3) % COLORS.length]}
-                        radius={index === adultsExpenseData.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Household Category Breakdown */}
-        {householdsExpenseData.length > 0 && householdsExpenseData.some(h => h.total > 0) && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+        <div className="mb-6 space-y-6">
+          <CategoryTotalBars
+            title={
+              <>
+                <Users className="h-5 w-5" style={{ color: ENTITY_COLORS.children }} />
+                Children by Category
+              </>
+            }
+            description="Category breakdown across all children"
+            caption={`Across ${children.length} ${children.length === 1 ? "child" : "children"}`}
+            bars={childrenBars}
+            barColor={ENTITY_COLORS.children}
+          />
+          <CategoryTotalBars
+            title={
+              <>
+                <User className="h-5 w-5" style={{ color: ENTITY_COLORS.adults }} />
+                Adults by Category
+              </>
+            }
+            description="Category breakdown across all adults"
+            caption={`Across ${adults.length} ${adults.length === 1 ? "adult" : "adults"}`}
+            bars={adultsBars}
+            barColor={ENTITY_COLORS.adults}
+          />
+          <CategoryTotalBars
+            title={
+              <>
                 <Home className="h-5 w-5 text-primary" />
                 Household Category Breakdown
-              </CardTitle>
-              <CardDescription>Annual costs by household category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart 
-                  data={householdsExpenseData.flatMap(h => h.categories)} 
-                  margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-                    angle={-45}
-                    textAnchor="end"
-                    interval={0}
-                    height={100}
-                  />
-                  <YAxis
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                    width={60}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "var(--radius)",
-                    }}
-                  />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                    {householdsExpenseData.flatMap(h => h.categories).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+              </>
+            }
+            description="Annual costs by household category"
+            caption={householdCaption}
+            bars={householdBars}
+            barColor={ENTITY_COLORS.household}
+            useCategoryColors
+          />
+        </div>
 
         {/* Drill-Down Section */}
         <Card>
