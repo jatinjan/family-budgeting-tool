@@ -101,11 +101,13 @@ export default function AdultsPage() {
       await withSyncWrite(async () => {
         const categories = await db.adultCategories.where("adultId").equals(adult.id).toArray()
         for (const category of categories) {
-          if (category.id) {
-            await db.adultItems.where("categoryId").equals(category.id).delete()
+          if (!category.id) continue
+          const items = await db.adultItems.where("categoryId").equals(category.id).toArray()
+          for (const item of items) {
+            if (item.id) await db.adultItems.delete(item.id)
           }
+          await db.adultCategories.delete(category.id)
         }
-        await db.adultCategories.where("adultId").equals(adult.id).delete()
         await db.adults.delete(adult.id)
       })
       clearTabSnapshots()
@@ -133,16 +135,19 @@ export default function AdultsPage() {
   async function confirmReset() {
     if (!resetAdult?.id) return
 
-    // Delete all existing categories and items for this adult
-    const categories = await db.adultCategories.where("adultId").equals(resetAdult.id).toArray()
-    for (const category of categories) {
-      if (category.id) {
-        await db.adultItems.where("categoryId").equals(category.id).delete()
+    await withSyncWrite(async () => {
+      const categories = await db.adultCategories.where("adultId").equals(resetAdult.id).toArray()
+      for (const category of categories) {
+        if (!category.id) continue
+        const items = await db.adultItems.where("categoryId").equals(category.id).toArray()
+        for (const item of items) {
+          if (item.id) await db.adultItems.delete(item.id)
+        }
+        await db.adultCategories.delete(category.id)
       }
-    }
-    await db.adultCategories.where("adultId").equals(resetAdult.id).delete()
+    })
+    clearTabSnapshots()
 
-    // Reinitialize with the updated default categories
     await initializeAdultData(resetAdult.id)
 
     setResetAdult(null)

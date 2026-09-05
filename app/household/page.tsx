@@ -106,11 +106,13 @@ export default function HouseholdPage() {
       await withSyncWrite(async () => {
         const categories = await db.householdCategories.where("householdId").equals(household.id).toArray()
         for (const category of categories) {
-          if (category.id) {
-            await db.householdItems.where("categoryId").equals(category.id).delete()
+          if (!category.id) continue
+          const items = await db.householdItems.where("categoryId").equals(category.id).toArray()
+          for (const item of items) {
+            if (item.id) await db.householdItems.delete(item.id)
           }
+          await db.householdCategories.delete(category.id)
         }
-        await db.householdCategories.where("householdId").equals(household.id).delete()
         await db.households.delete(household.id)
       })
       clearTabSnapshots()
@@ -138,16 +140,19 @@ export default function HouseholdPage() {
   async function confirmReset() {
     if (!resetHousehold?.id) return
 
-    // Delete all existing categories and items for this household
-    const categories = await db.householdCategories.where("householdId").equals(resetHousehold.id).toArray()
-    for (const category of categories) {
-      if (category.id) {
-        await db.householdItems.where("categoryId").equals(category.id).delete()
+    await withSyncWrite(async () => {
+      const categories = await db.householdCategories.where("householdId").equals(resetHousehold.id).toArray()
+      for (const category of categories) {
+        if (!category.id) continue
+        const items = await db.householdItems.where("categoryId").equals(category.id).toArray()
+        for (const item of items) {
+          if (item.id) await db.householdItems.delete(item.id)
+        }
+        await db.householdCategories.delete(category.id)
       }
-    }
-    await db.householdCategories.where("householdId").equals(resetHousehold.id).delete()
+    })
+    clearTabSnapshots()
 
-    // Reinitialize with the updated default categories
     await initializeHouseholdData(resetHousehold.id)
 
     setResetHousehold(null)

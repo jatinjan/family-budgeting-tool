@@ -106,11 +106,13 @@ export default function HomePage() {
       await withSyncWrite(async () => {
         const categories = await db.categories.where("childId").equals(child.id).toArray()
         for (const category of categories) {
-          if (category.id) {
-            await db.items.where("categoryId").equals(category.id).delete()
+          if (!category.id) continue
+          const items = await db.items.where("categoryId").equals(category.id).toArray()
+          for (const item of items) {
+            if (item.id) await db.items.delete(item.id)
           }
+          await db.categories.delete(category.id)
         }
-        await db.categories.where("childId").equals(child.id).delete()
         await db.children.delete(child.id)
       })
       clearTabSnapshots()

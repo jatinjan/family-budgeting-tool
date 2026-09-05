@@ -349,8 +349,8 @@ export function attachSyncWriteHooks(): void {
       queueSync()
     })
 
-    db.table(tableName).hook('updating', (mods, _key, obj: SyncableFields) => {
-      if (internalMutationDepth > 0) return mods
+    db.table(tableName).hook('updating', (mods, _key, obj: SyncableFields | undefined) => {
+      if (internalMutationDepth > 0 || !obj) return mods
       const changes = mods as Partial<SyncableFields> & Record<string, unknown>
       const onlySyncMeta = Object.keys(changes).every((key) =>
         [
@@ -380,10 +380,11 @@ export function attachSyncWriteHooks(): void {
     db.table(tableName).hook('deleting', function (
       this: { onsuccess?: (() => void) | null },
       _key,
-      obj: SyncableFields & { id?: number },
+      obj: (SyncableFields & { id?: number }) | undefined,
       transaction: Transaction,
     ) {
-      if (internalMutationDepth > 0 || !activeOwnerUserId || !obj.cloudId) return
+      // Collection.delete() can call this hook without loading the row.
+      if (!obj || internalMutationDepth > 0 || !activeOwnerUserId || !obj.cloudId) return
       const tombstone = {
         table: tableName,
         operation: 'DELETE' as const,
