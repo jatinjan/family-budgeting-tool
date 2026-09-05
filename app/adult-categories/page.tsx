@@ -22,6 +22,7 @@ import { formatCurrency } from "@/lib/config"
 import { syncToAdmin } from "@/lib/admin-sync"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { toast } from "@/hooks/use-toast"
 import { ChevronLeft, Plus, Edit2, Trash2 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
@@ -156,12 +157,25 @@ function AdultCategoriesPageContent() {
     const item = deleteItem
     if (!item?.id) return
 
-    await db.adultItems.delete(item.id)
+    try {
+      await db.adultItems.delete(item.id)
 
-    if (adultId) {
-      await loadData(Number.parseInt(adultId))
+      if (adultId) {
+        await loadData(Number.parseInt(adultId))
+      }
+      setDeleteItem(null)
+      toast({
+        title: "Deleted",
+        description: `${item.name} has been removed.`,
+      })
+    } catch (error) {
+      console.error("Delete item failed", error)
+      toast({
+        title: "Could not delete",
+        description: `Something went wrong removing ${item.name}. Try again.`,
+        variant: "destructive",
+      })
     }
-    setDeleteItem(null)
   }
 
   async function handleMiscPercentageUpdate(categoryId: number, percentage: number) {

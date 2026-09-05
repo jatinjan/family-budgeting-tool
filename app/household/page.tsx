@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { db, initializeHouseholdData, type Household } from "@/lib/db"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { toast } from "@/hooks/use-toast"
 import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -99,18 +100,30 @@ export default function HouseholdPage() {
     const household = deleteHousehold
     if (!household?.id) return
 
-    // Delete all related data
-    const categories = await db.householdCategories.where("householdId").equals(household.id).toArray()
-    for (const category of categories) {
-      if (category.id) {
-        await db.householdItems.where("categoryId").equals(category.id).delete()
+    try {
+      const categories = await db.householdCategories.where("householdId").equals(household.id).toArray()
+      for (const category of categories) {
+        if (category.id) {
+          await db.householdItems.where("categoryId").equals(category.id).delete()
+        }
       }
-    }
-    await db.householdCategories.where("householdId").equals(household.id).delete()
-    await db.households.delete(household.id)
+      await db.householdCategories.where("householdId").equals(household.id).delete()
+      await db.households.delete(household.id)
 
-    await loadHouseholds()
-    setDeleteHousehold(null)
+      await loadHouseholds()
+      setDeleteHousehold(null)
+      toast({
+        title: "Deleted",
+        description: `${household.name} and its budget data have been removed.`,
+      })
+    } catch (error) {
+      console.error("Delete household failed", error)
+      toast({
+        title: "Could not delete",
+        description: `Something went wrong removing ${household.name}. Try again.`,
+        variant: "destructive",
+      })
+    }
   }
 
   function viewHouseholdBudget(householdId: number) {

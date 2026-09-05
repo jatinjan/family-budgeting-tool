@@ -13,6 +13,7 @@ import { db, initializeChildData, type Child } from "@/lib/db"
 import { APP_CONFIG } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { toast } from "@/hooks/use-toast"
 import { Plus, Edit2, Trash2 } from "lucide-react"
 import {
   AlertDialog,
@@ -99,18 +100,30 @@ export default function HomePage() {
     const child = deleteChild
     if (!child?.id) return
 
-    // Delete all related data
-    const categories = await db.categories.where("childId").equals(child.id).toArray()
-    for (const category of categories) {
-      if (category.id) {
-        await db.items.where("categoryId").equals(category.id).delete()
+    try {
+      const categories = await db.categories.where("childId").equals(child.id).toArray()
+      for (const category of categories) {
+        if (category.id) {
+          await db.items.where("categoryId").equals(category.id).delete()
+        }
       }
-    }
-    await db.categories.where("childId").equals(child.id).delete()
-    await db.children.delete(child.id)
+      await db.categories.where("childId").equals(child.id).delete()
+      await db.children.delete(child.id)
 
-    await loadChildren()
-    setDeleteChild(null)
+      await loadChildren()
+      setDeleteChild(null)
+      toast({
+        title: "Deleted",
+        description: `${child.name} and their budget data have been removed.`,
+      })
+    } catch (error) {
+      console.error("Delete child failed", error)
+      toast({
+        title: "Could not delete",
+        description: `Something went wrong removing ${child.name}. Try again.`,
+        variant: "destructive",
+      })
+    }
   }
 
   function viewChildBudget(childId: number) {

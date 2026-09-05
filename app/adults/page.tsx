@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { db, initializeAdultData, type Adult } from "@/lib/db"
 import { PageHeader } from "@/components/page-header"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
+import { toast } from "@/hooks/use-toast"
 import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -94,18 +95,30 @@ export default function AdultsPage() {
     const adult = deleteAdult
     if (!adult?.id) return
 
-    // Delete all related data
-    const categories = await db.adultCategories.where("adultId").equals(adult.id).toArray()
-    for (const category of categories) {
-      if (category.id) {
-        await db.adultItems.where("categoryId").equals(category.id).delete()
+    try {
+      const categories = await db.adultCategories.where("adultId").equals(adult.id).toArray()
+      for (const category of categories) {
+        if (category.id) {
+          await db.adultItems.where("categoryId").equals(category.id).delete()
+        }
       }
-    }
-    await db.adultCategories.where("adultId").equals(adult.id).delete()
-    await db.adults.delete(adult.id)
+      await db.adultCategories.where("adultId").equals(adult.id).delete()
+      await db.adults.delete(adult.id)
 
-    await loadAdults()
-    setDeleteAdult(null)
+      await loadAdults()
+      setDeleteAdult(null)
+      toast({
+        title: "Deleted",
+        description: `${adult.name} and their budget data have been removed.`,
+      })
+    } catch (error) {
+      console.error("Delete adult failed", error)
+      toast({
+        title: "Could not delete",
+        description: `Something went wrong removing ${adult.name}. Try again.`,
+        variant: "destructive",
+      })
+    }
   }
 
   function viewAdultBudget(adultId: number) {

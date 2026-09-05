@@ -4,6 +4,7 @@ import type React from "react"
 import { usePathname } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { TopNav } from "@/components/top-nav"
+import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "@/contexts/AuthContext"
 
 function shouldShowUserChrome(pathname: string, isLoggedIn: boolean): boolean {
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       {showUserChrome ? <BottomNav /> : null}
+      <Toaster />
     </>
   )
 }
