@@ -75,7 +75,8 @@ export default function SummaryPage() {
   useReloadOnSync(loadAllData)
 
   async function loadAllData() {
-    setLoading(true)
+    // Keep the existing view mounted during background cache refreshes.
+    setLoading((isFirstLoad) => isFirstLoad)
 
     // Load children summaries
     const children = await db.children.toArray()

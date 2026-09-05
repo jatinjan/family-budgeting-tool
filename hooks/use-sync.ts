@@ -68,6 +68,7 @@ export function useSyncStatus() {
     isSyncing: syncState === 'SYNCING',
     hasPending: pendingCount > 0,
     hasFailed: syncState === 'FAILED',
+    hasConflict: syncState === 'CONFLICT',
     isLocalOnly: syncState === 'LOCAL_ONLY',
   }
 }

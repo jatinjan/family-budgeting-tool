@@ -71,8 +71,9 @@ export default function DashboardPage() {
   useReloadOnSync(loadData)
 
   async function loadData() {
-    setLoading(true)
-    
+    // First visit may show a loader. Sync refresh must not — it unmounts Recharts.
+    setLoading((isFirst) => isFirst)
+
     // Load all entities
     const allChildren = await db.children.toArray()
     const allAdults = await db.adults.toArray()

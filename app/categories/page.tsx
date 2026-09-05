@@ -16,6 +16,7 @@ import {
   type Child,
   type Category,
   type ExpenseItem,
+  type BudgetFrequency,
 } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { syncToAdmin } from "@/lib/admin-sync"
@@ -61,7 +62,7 @@ function CategoriesPageContent() {
   const [itemFormData, setItemFormData] = useState({
     name: "",
     cost: "",
-    frequency: "monthly" as "monthly" | "term" | "annual" | "weekly",
+    frequency: "monthly" as BudgetFrequency,
     quantity: "1",
   })
 
@@ -213,8 +214,14 @@ function CategoriesPageContent() {
     switch (frequency) {
       case "weekly":
         return "per week"
+      case "fortnightly":
+        return "per fortnight"
       case "monthly":
         return "per month"
+      case "bi-monthly":
+        return "bi-monthly"
+      case "quarterly":
+        return "quarterly"
       case "term":
         return "per term"
       case "annual":
@@ -308,7 +315,7 @@ function CategoriesPageContent() {
                               min="0"
                               max="100"
                               step="0.1"
-                              value={editingMiscPercentage.percentage}
+                              value={editingMiscPercentage?.percentage ?? ""}
                               onChange={(e) =>
                                 setEditingMiscPercentage({ categoryId: category.id!, percentage: e.target.value })
                               }
@@ -318,7 +325,7 @@ function CategoriesPageContent() {
                             <Button
                               size="sm"
                               onClick={() => {
-                                const percentage = Number.parseFloat(editingMiscPercentage.percentage)
+                                const percentage = Number.parseFloat(editingMiscPercentage?.percentage ?? "")
                                 if (!isNaN(percentage)) {
                                   handleMiscPercentageUpdate(category.id!, percentage)
                                 }
@@ -364,13 +371,13 @@ function CategoriesPageContent() {
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={editingItemCost.cost}
+                                    value={editingItemCost?.cost ?? ""}
                                     onChange={(e) => setEditingItemCost({ itemId: item.id!, cost: e.target.value })}
                                     className="w-24 h-7 text-sm"
                                     autoFocus
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") {
-                                        const newCost = Number.parseFloat(editingItemCost.cost)
+                                        const newCost = Number.parseFloat(editingItemCost?.cost ?? "")
                                         if (!isNaN(newCost)) {
                                           handleInlineCostUpdate(item, newCost)
                                         }
@@ -384,7 +391,7 @@ function CategoriesPageContent() {
                                     variant="outline"
                                     className="h-7 px-2"
                                     onClick={() => {
-                                      const newCost = Number.parseFloat(editingItemCost.cost)
+                                      const newCost = Number.parseFloat(editingItemCost?.cost ?? "")
                                       if (!isNaN(newCost)) {
                                         handleInlineCostUpdate(item, newCost)
                                       }
@@ -482,10 +489,13 @@ function CategoriesPageContent() {
               <Label htmlFor="frequency">Frequency *</Label>
               <Select
                 value={itemFormData.frequency}
-                onValueChange={(value: "monthly" | "term" | "annual" | "weekly") => {
-                  const defaultQuantities = {
+                onValueChange={(value: BudgetFrequency) => {
+                  const defaultQuantities: Record<BudgetFrequency, string> = {
                     weekly: "52",
+                    fortnightly: "26",
                     monthly: "12",
+                    "bi-monthly": "6",
+                    quarterly: "4",
                     term: "4",
                     annual: "1",
                   }
@@ -501,7 +511,10 @@ function CategoriesPageContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="bi-monthly">Bi-Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
                   <SelectItem value="term">Per Term</SelectItem>
                   <SelectItem value="annual">Annual</SelectItem>
                 </SelectContent>

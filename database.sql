@@ -1,8 +1,9 @@
 -- ============================================================================
 -- MY BALANCED FAMILY FINANCES — DATABASE SCHEMA
 -- ============================================================================
--- Run this SQL in Supabase SQL Editor: Dashboard → SQL Editor → New query
--- This script is idempotent — safe to run multiple times
+-- LEGACY SNAPSHOT — DO NOT RUN FOR DEPLOYMENTS.
+-- Canonical fresh-install schema: supabase/schema.sql
+-- Canonical production changes: supabase/migrations/*.sql
 -- Version: 1.0 | Date: August 2026
 -- ============================================================================
 
@@ -119,7 +120,7 @@ CREATE TABLE IF NOT EXISTS expense_items (
   name TEXT NOT NULL,
   cost NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
   frequency TEXT NOT NULL DEFAULT 'monthly' CHECK (frequency IN (
-    'weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual'
+    'weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual', 'bi-monthly'
   )),
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
   total NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total >= 0),

@@ -1,6 +1,6 @@
 # Sync Layer Specification
 
-**Status:** Ready for implementation  
+**Status:** Superseded by cloud-first contract
 **Priority:** P0  
 **Dependencies:** Auth flow, Supabase schema deployed
 
@@ -8,7 +8,11 @@
 
 ## Overview
 
-This spec defines the bidirectional sync layer between IndexedDB (local/offline) and Supabase (cloud). The sync layer enables offline-first functionality while ensuring data consistency.
+This document records the original bidirectional-sync design. For authenticated
+users, the authoritative contract is now
+[`cross-device-sync-fix.md`](./cross-device-sync-fix.md): Supabase is the source
+of truth and IndexedDB is an owner-scoped cached snapshot plus durable offline
+mutation outbox.
 
 ---
 
@@ -243,18 +247,12 @@ async function pullFromCloud(userId: string): Promise<SyncResult> {
 ### 3.3 Bidirectional Sync
 
 ```typescript
-async function fullSync(userId: string): Promise<SyncResult> {
-  // 1. Push local changes first
-  const pushResult = await pushToCloud();
-  
-  if (!pushResult.success) {
-    return pushResult;
-  }
-  
-  // 2. Then pull remote changes
-  const pullResult = await pullFromCloud(userId);
-  
-  return pullResult;
+async function reconcileBudget(trigger: SyncTrigger): Promise<SyncResult> {
+  // Cloud-first contract: see cross-device-sync-fix.md §2.8–2.10.
+  // Login/reconnect/manual: owner check → cloud pull →
+  // idempotent queued writes → cloud refetch.
+  // Realtime: cloud pull only.
+  // Local write: cloud-first online, durable outbox offline.
 }
 ```
 
@@ -503,4 +501,43 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
 Cross-device adults-only sync, CHECK retries, always-pull, and list reload: **[`cross-device-sync-fix.md`](./cross-device-sync-fix.md)**.
 
-IndexedDB is still **not account-scoped**. Logout does not clear Dexie. Account switch on a shared device can mix local rows — follow-up, not this fix.
+Legacy production IndexedDB is **not account-scoped**. The cloud-first contract
+adds an owner boundary before cached data can render. Unowned legacy data is
+quarantined; it is never automatically uploaded.
+
+---
+
+## 12. Cloud-first authoritative state machine
+
+Supabase is authoritative while authenticated. The global state represents one
+complete cache refresh/outbox cycle; internal phases do not publish their own
+terminal states.
+
+```text
+LOCAL_ONLY ── auth + matching cache ──► PENDING
+PENDING ── online cloud hydrate ──────► SYNCING
+SYNCED ── local write ────────────────► SYNCING | PENDING
+SYNCED ── realtime invalidation ──────► SYNCING (pull only)
+FAILED ── retry ──────────────────────► SYNCING
+SYNCING ── all work settled ──────────► SYNCED | PENDING | FAILED | CONFLICT
+```
+
+`dataRevision` is separate from `syncState`. It increments once after an atomic
+Dexie reconciliation, including realtime-triggered pulls. UI refreshes from the
+revision and never from spinner transitions.
+
+### 12.1 Required invariants
+
+1. No write or cache display without a matching `ownerUserId`.
+2. One coordinator promise at a time; triggers coalesce.
+3. Login, reconnect, and manual cycles hydrate cloud before sending queued work.
+4. Realtime performs a pull only and can never initiate an outbound mutation.
+5. Every queued mutation is idempotent and includes the server version it was
+   based on; stale writes produce a conflict.
+6. Pull cannot be blocked by an exhausted failed operation.
+7. No category/item is silently skipped for a missing parent.
+8. A cloud deletion removes only cached cloud state; unresolved outbox work is
+   retained separately.
+9. A matching, previously hydrated cache can render during an offline reload.
+10. Customer pages never show data quarantined for another account.
+11. Sync diagnostics contain no family PII or financial values.

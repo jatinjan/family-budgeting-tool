@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { subscribeToFamilyBudget } from '@/lib/realtime'
+import { fetchCloudBudgetRows } from '@/lib/budget-repository'
 import type { Adult, Category, Child, ExpenseItem, Household, Profile } from '@/types/database'
 
 export interface FamilyBudget {
@@ -24,20 +25,9 @@ export interface UseFamilyBudgetResult {
 }
 
 export async function fetchFamilyBudget(userId: string): Promise<FamilyBudget> {
-  const [
-    profileResult,
-    householdResult,
-    childrenResult,
-    adultsResult,
-    categoriesResult,
-    itemsResult,
-  ] = await Promise.all([
+  const [profileResult, budget] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('households').select('*').eq('user_id', userId).order('updated_at', { ascending: false }).limit(1),
-    supabase.from('children').select('*').eq('user_id', userId).order('name'),
-    supabase.from('adults').select('*').eq('user_id', userId).order('name'),
-    supabase.from('categories').select('*').eq('user_id', userId).order('sort_order'),
-    supabase.from('expense_items').select('*').eq('user_id', userId),
+    fetchCloudBudgetRows(userId),
   ])
 
   if (profileResult.error || !profileResult.data) {
@@ -45,14 +35,14 @@ export async function fetchFamilyBudget(userId: string): Promise<FamilyBudget> {
   }
 
   const profile = profileResult.data as Profile
-  const household = ((householdResult.data?.[0] ?? null) as Household | null)
-  const children = (childrenResult.data ?? []) as Child[]
-  const adults = (adultsResult.data ?? []) as Adult[]
-  const categories = (categoriesResult.data ?? []) as Category[]
-  const expenseItems = (itemsResult.data ?? []) as ExpenseItem[]
+  const household = budget.households[0] ?? null
+  const { children, adults, categories, expenseItems } = budget
 
   const timestamps = [
     household?.updated_at,
+    ...children.map((child) => child.updated_at),
+    ...adults.map((adult) => adult.updated_at),
+    ...categories.map((category) => category.updated_at),
     ...expenseItems.map((item) => item.updated_at),
   ].filter(Boolean) as string[]
 

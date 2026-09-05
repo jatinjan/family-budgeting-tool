@@ -16,6 +16,7 @@ import {
   type Adult,
   type AdultCategory,
   type AdultExpenseItem,
+  type BudgetFrequency,
 } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { syncToAdmin } from "@/lib/admin-sync"
@@ -61,7 +62,7 @@ function AdultCategoriesPageContent() {
   const [itemFormData, setItemFormData] = useState({
     name: "",
     cost: "",
-    frequency: "monthly" as "monthly" | "quarterly" | "annual" | "weekly" | "bi-monthly",
+    frequency: "monthly" as BudgetFrequency,
     quantity: "1",
   })
 
@@ -211,12 +212,16 @@ function AdultCategoriesPageContent() {
     switch (frequency) {
       case "weekly":
         return "per week"
+      case "fortnightly":
+        return "per fortnight"
       case "bi-monthly":
         return "bi-monthly"
       case "monthly":
         return "per month"
       case "quarterly":
         return "quarterly"
+      case "term":
+        return "per term"
       case "annual":
         return "per year"
       default:
@@ -308,7 +313,7 @@ function AdultCategoriesPageContent() {
                               min="0"
                               max="100"
                               step="0.1"
-                              value={editingMiscPercentage.percentage}
+                              value={editingMiscPercentage?.percentage ?? ""}
                               onChange={(e) =>
                                 setEditingMiscPercentage({ categoryId: category.id!, percentage: e.target.value })
                               }
@@ -318,7 +323,7 @@ function AdultCategoriesPageContent() {
                             <Button
                               size="sm"
                               onClick={() => {
-                                const percentage = Number.parseFloat(editingMiscPercentage.percentage)
+                                const percentage = Number.parseFloat(editingMiscPercentage?.percentage ?? "")
                                 if (!isNaN(percentage)) {
                                   handleMiscPercentageUpdate(category.id!, percentage)
                                 }
@@ -364,13 +369,13 @@ function AdultCategoriesPageContent() {
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={editingItemCost.cost}
+                                    value={editingItemCost?.cost ?? ""}
                                     onChange={(e) => setEditingItemCost({ itemId: item.id!, cost: e.target.value })}
                                     className="w-24 h-7 text-sm"
                                     autoFocus
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") {
-                                        const newCost = Number.parseFloat(editingItemCost.cost)
+                                        const newCost = Number.parseFloat(editingItemCost?.cost ?? "")
                                         if (!isNaN(newCost)) {
                                           handleInlineCostUpdate(item, newCost)
                                         }
@@ -384,7 +389,7 @@ function AdultCategoriesPageContent() {
                                     variant="outline"
                                     className="h-7 px-2"
                                     onClick={() => {
-                                      const newCost = Number.parseFloat(editingItemCost.cost)
+                                      const newCost = Number.parseFloat(editingItemCost?.cost ?? "")
                                       if (!isNaN(newCost)) {
                                         handleInlineCostUpdate(item, newCost)
                                       }
@@ -482,12 +487,14 @@ function AdultCategoriesPageContent() {
               <Label htmlFor="frequency">Frequency *</Label>
               <Select
                 value={itemFormData.frequency}
-                onValueChange={(value: "monthly" | "quarterly" | "annual" | "weekly" | "bi-monthly") => {
-                  const defaultQuantities: Record<string, string> = {
+                onValueChange={(value: BudgetFrequency) => {
+                  const defaultQuantities: Record<BudgetFrequency, string> = {
                     weekly: "52",
+                    fortnightly: "26",
                     "bi-monthly": "6",
                     monthly: "12",
                     quarterly: "4",
+                    term: "4",
                     annual: "1",
                   }
                   setItemFormData({ 
@@ -502,9 +509,11 @@ function AdultCategoriesPageContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
                   <SelectItem value="bi-monthly">Bi-Monthly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="term">Per Term</SelectItem>
                   <SelectItem value="annual">Annual</SelectItem>
                 </SelectContent>
               </Select>

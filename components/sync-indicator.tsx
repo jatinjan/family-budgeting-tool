@@ -21,6 +21,7 @@ export function SyncIndicator({ showText = false, size = 'md' }: SyncIndicatorPr
     statusColor,
     isSyncing,
     hasFailed,
+    hasConflict,
     isLocalOnly,
   } = useSyncStatus()
 
@@ -37,8 +38,12 @@ export function SyncIndicator({ showText = false, size = 'md' }: SyncIndicatorPr
       return <Loader2 className={`${iconSize} animate-spin text-blue-600`} />
     }
 
-    if (hasFailed) {
-      return <AlertCircle className={`${iconSize} text-red-600`} />
+    if (hasFailed || hasConflict) {
+      return (
+        <AlertCircle
+          className={`${iconSize} ${hasConflict ? 'text-orange-600' : 'text-red-600'}`}
+        />
+      )
     }
 
     if (isLocalOnly) {
@@ -71,7 +76,7 @@ export function SyncIndicator({ showText = false, size = 'md' }: SyncIndicatorPr
   )
 
   const handleClick = async () => {
-    if (hasFailed) {
+    if (hasFailed || hasConflict) {
       await retryFailed()
     } else if (!isSyncing && !isLocalOnly) {
       await triggerSync()
@@ -85,7 +90,7 @@ export function SyncIndicator({ showText = false, size = 'md' }: SyncIndicatorPr
           <Button
             variant="ghost"
             size="sm"
-            className={`gap-2 ${hasFailed ? 'hover:bg-red-50' : ''}`}
+            className={`gap-2 ${hasFailed || hasConflict ? 'hover:bg-red-50' : ''}`}
             onClick={handleClick}
             disabled={isSyncing || isLocalOnly}
           >
@@ -95,8 +100,8 @@ export function SyncIndicator({ showText = false, size = 'md' }: SyncIndicatorPr
                 {statusText}
               </span>
             )}
-            {hasFailed && (
-              <RefreshCw className="h-3 w-3 text-red-600" />
+            {(hasFailed || hasConflict) && (
+              <RefreshCw className={`h-3 w-3 ${hasConflict ? 'text-orange-600' : 'text-red-600'}`} />
             )}
           </Button>
         </TooltipTrigger>
@@ -109,7 +114,7 @@ export function SyncIndicator({ showText = false, size = 'md' }: SyncIndicatorPr
 }
 
 export function SyncStatusBadge() {
-  const { statusText, statusColor, isSyncing, hasFailed, isLocalOnly } = useSyncStatus()
+  const { statusText, statusColor, isSyncing, hasFailed, hasConflict, isLocalOnly } = useSyncStatus()
 
   const bgColors: Record<string, string> = {
     'text-green-600': 'bg-green-100',
@@ -124,7 +129,7 @@ export function SyncStatusBadge() {
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${bgColor} ${statusColor}`}>
       {isSyncing && <Loader2 className="h-3 w-3 animate-spin" />}
-      {hasFailed && <AlertCircle className="h-3 w-3" />}
+      {(hasFailed || hasConflict) && <AlertCircle className="h-3 w-3" />}
       {isLocalOnly && <CloudOff className="h-3 w-3" />}
       {!isSyncing && !hasFailed && !isLocalOnly && <Cloud className="h-3 w-3" />}
       {statusText}

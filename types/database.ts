@@ -52,6 +52,7 @@ export interface Database {
           yearly_savings_goal?: string | null
           monthly_buffer?: string | null
         }
+        Relationships: []
       }
       households: {
         Row: {
@@ -81,6 +82,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       adults: {
         Row: {
@@ -89,6 +91,7 @@ export interface Database {
           name: string
           age: number | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -96,6 +99,7 @@ export interface Database {
           name: string
           age?: number | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -103,7 +107,9 @@ export interface Database {
           name?: string
           age?: number | null
           created_at?: string
+          updated_at?: string
         }
+        Relationships: []
       }
       children: {
         Row: {
@@ -113,6 +119,7 @@ export interface Database {
           age: number | null
           school_level: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -121,6 +128,7 @@ export interface Database {
           age?: number | null
           school_level?: string | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -129,7 +137,9 @@ export interface Database {
           age?: number | null
           school_level?: string | null
           created_at?: string
+          updated_at?: string
         }
+        Relationships: []
       }
       categories: {
         Row: {
@@ -143,6 +153,7 @@ export interface Database {
           percentage_value: number
           sort_order: number
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -155,6 +166,7 @@ export interface Database {
           percentage_value?: number
           sort_order?: number
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -167,7 +179,9 @@ export interface Database {
           percentage_value?: number
           sort_order?: number
           created_at?: string
+          updated_at?: string
         }
+        Relationships: []
       }
       expense_items: {
         Row: {
@@ -176,7 +190,7 @@ export interface Database {
           category_id: string
           name: string
           cost: number
-          frequency: 'weekly' | 'monthly' | 'quarterly' | 'term' | 'annual' | 'bi-monthly'
+          frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'term' | 'annual' | 'bi-monthly'
           quantity: number
           total: number
           need_want: 'need' | 'want' | null
@@ -190,7 +204,7 @@ export interface Database {
           category_id: string
           name: string
           cost?: number
-          frequency?: 'weekly' | 'monthly' | 'quarterly' | 'term' | 'annual' | 'bi-monthly'
+          frequency?: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'term' | 'annual' | 'bi-monthly'
           quantity?: number
           total?: number
           need_want?: 'need' | 'want' | null
@@ -204,7 +218,7 @@ export interface Database {
           category_id?: string
           name?: string
           cost?: number
-          frequency?: 'weekly' | 'monthly' | 'quarterly' | 'term' | 'annual' | 'bi-monthly'
+          frequency?: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'term' | 'annual' | 'bi-monthly'
           quantity?: number
           total?: number
           need_want?: 'need' | 'want' | null
@@ -212,6 +226,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       promo_codes: {
         Row: {
@@ -244,6 +259,7 @@ export interface Database {
           expires_at?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       activity_log: {
         Row: {
@@ -273,7 +289,23 @@ export interface Database {
           metadata?: Json | null
           created_at?: string
         }
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      redeem_promo_code: {
+        Args: { code_input: string }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

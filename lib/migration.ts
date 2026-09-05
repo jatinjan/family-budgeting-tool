@@ -7,6 +7,7 @@ import { db } from './db'
 import { supabase } from './supabase'
 import { formatCurrency } from './utils/formatters'
 import { mapHousingTypeToCloud, mapSchoolLevelToCloud } from './sync-field-map'
+import { runWithoutSyncOutbox } from './sync'
 
 export interface LocalDataSummary {
   hasData: boolean
@@ -97,6 +98,31 @@ export async function migrateToCloud(userId: string): Promise<MigrationResult> {
   const idMap: Record<string, string> = {}
 
   try {
+    const existingBudget = await Promise.all([
+      supabase.from('households').select('id').eq('user_id', userId).limit(1),
+      supabase.from('children').select('id').eq('user_id', userId).limit(1),
+      supabase.from('adults').select('id').eq('user_id', userId).limit(1),
+      supabase.from('categories').select('id').eq('user_id', userId).limit(1),
+      supabase.from('expense_items').select('id').eq('user_id', userId).limit(1),
+    ])
+    const lookupError = existingBudget.find((result) => result.error)?.error
+    if (lookupError) {
+      return {
+        success: false,
+        migratedCount: 0,
+        errors: [`Could not verify cloud budget: ${lookupError.message}`],
+      }
+    }
+    if (existingBudget.some((result) => (result.data?.length || 0) > 0)) {
+      return {
+        success: false,
+        migratedCount: 0,
+        errors: [
+          'This account already has cloud budget data. Automatic device import was blocked to prevent duplicates.',
+        ],
+      }
+    }
+
     const [
       households,
       children,
@@ -337,27 +363,29 @@ export async function migrateToCloud(userId: string): Promise<MigrationResult> {
  * Clear all local data from IndexedDB
  */
 export async function clearLocalData(): Promise<void> {
-  await db.transaction('rw', [
-    db.households,
-    db.children,
-    db.adults,
-    db.categories,
-    db.adultCategories,
-    db.householdCategories,
-    db.items,
-    db.adultItems,
-    db.householdItems,
-  ], async () => {
-    await db.households.clear()
-    await db.children.clear()
-    await db.adults.clear()
-    await db.categories.clear()
-    await db.adultCategories.clear()
-    await db.householdCategories.clear()
-    await db.items.clear()
-    await db.adultItems.clear()
-    await db.householdItems.clear()
-  })
+  await runWithoutSyncOutbox(() =>
+    db.transaction('rw', [
+      db.households,
+      db.children,
+      db.adults,
+      db.categories,
+      db.adultCategories,
+      db.householdCategories,
+      db.items,
+      db.adultItems,
+      db.householdItems,
+    ], async () => {
+      await db.households.clear()
+      await db.children.clear()
+      await db.adults.clear()
+      await db.categories.clear()
+      await db.adultCategories.clear()
+      await db.householdCategories.clear()
+      await db.items.clear()
+      await db.adultItems.clear()
+      await db.householdItems.clear()
+    }),
+  )
 }
 
 /**

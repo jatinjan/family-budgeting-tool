@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS adults (
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   age INTEGER,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
@@ -63,7 +64,8 @@ CREATE TABLE IF NOT EXISTS children (
   name TEXT NOT NULL,
   age INTEGER,
   school_level TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
@@ -80,7 +82,8 @@ CREATE TABLE IF NOT EXISTS categories (
   is_percentage_based BOOLEAN DEFAULT FALSE,
   percentage_value NUMERIC DEFAULT 0,
   sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
@@ -94,7 +97,7 @@ CREATE TABLE IF NOT EXISTS expense_items (
   name TEXT NOT NULL,
   cost NUMERIC DEFAULT 0,
   frequency TEXT DEFAULT 'monthly' CHECK (
-    frequency IN ('weekly', 'monthly', 'quarterly', 'term', 'annual', 'bi-monthly')
+    frequency IN ('weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual', 'bi-monthly')
   ),
   quantity INTEGER DEFAULT 1,
   total NUMERIC DEFAULT 0,
@@ -165,7 +168,8 @@ CREATE POLICY "Admins can view all profiles"
 -- HOUSEHOLDS POLICIES
 CREATE POLICY "Users can manage own household"
   ON households FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Admins can view all households"
   ON households FOR SELECT
@@ -176,7 +180,8 @@ CREATE POLICY "Admins can view all households"
 -- ADULTS POLICIES
 CREATE POLICY "Users can manage own adults"
   ON adults FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Admins can view all adults"
   ON adults FOR SELECT
@@ -187,7 +192,8 @@ CREATE POLICY "Admins can view all adults"
 -- CHILDREN POLICIES
 CREATE POLICY "Users can manage own children"
   ON children FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Admins can view all children"
   ON children FOR SELECT
@@ -198,7 +204,8 @@ CREATE POLICY "Admins can view all children"
 -- CATEGORIES POLICIES
 CREATE POLICY "Users can manage own categories"
   ON categories FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Admins can view all categories"
   ON categories FOR SELECT
@@ -209,7 +216,8 @@ CREATE POLICY "Admins can view all categories"
 -- EXPENSE_ITEMS POLICIES
 CREATE POLICY "Users can manage own expense items"
   ON expense_items FOR ALL
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Admins can view all expense items"
   ON expense_items FOR SELECT
@@ -242,6 +250,84 @@ CREATE POLICY "System can insert activity log"
 -- =====================================================
 -- FUNCTIONS & TRIGGERS
 -- =====================================================
+
+CREATE OR REPLACE FUNCTION public.validate_category_parent_owner()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.entity_type = 'child' AND NOT EXISTS (
+    SELECT 1 FROM public.children WHERE id = NEW.entity_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Category child parent does not belong to user' USING ERRCODE = '23503';
+  ELSIF NEW.entity_type = 'adult' AND NOT EXISTS (
+    SELECT 1 FROM public.adults WHERE id = NEW.entity_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Category adult parent does not belong to user' USING ERRCODE = '23503';
+  ELSIF NEW.entity_type = 'household' AND NOT EXISTS (
+    SELECT 1 FROM public.households WHERE id = NEW.entity_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Category household parent does not belong to user' USING ERRCODE = '23503';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER categories_validate_parent_owner
+BEFORE INSERT OR UPDATE OF user_id, entity_type, entity_id ON categories
+FOR EACH ROW EXECUTE FUNCTION public.validate_category_parent_owner();
+
+CREATE OR REPLACE FUNCTION public.validate_expense_item_parent_owner()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.categories WHERE id = NEW.category_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Expense item category does not belong to user' USING ERRCODE = '23503';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER expense_items_validate_parent_owner
+BEFORE INSERT OR UPDATE OF user_id, category_id ON expense_items
+FOR EACH ROW EXECUTE FUNCTION public.validate_expense_item_parent_owner();
+
+CREATE OR REPLACE FUNCTION public.set_budget_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER households_set_budget_updated_at
+BEFORE UPDATE ON households
+FOR EACH ROW EXECUTE FUNCTION public.set_budget_updated_at();
+
+CREATE TRIGGER adults_set_budget_updated_at
+BEFORE UPDATE ON adults
+FOR EACH ROW EXECUTE FUNCTION public.set_budget_updated_at();
+
+CREATE TRIGGER children_set_budget_updated_at
+BEFORE UPDATE ON children
+FOR EACH ROW EXECUTE FUNCTION public.set_budget_updated_at();
+
+CREATE TRIGGER categories_set_budget_updated_at
+BEFORE UPDATE ON categories
+FOR EACH ROW EXECUTE FUNCTION public.set_budget_updated_at();
+
+CREATE TRIGGER expense_items_set_budget_updated_at
+BEFORE UPDATE ON expense_items
+FOR EACH ROW EXECUTE FUNCTION public.set_budget_updated_at();
 
 -- Function to create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

@@ -3,7 +3,14 @@
  * Handles frequency multipliers, annual totals, and budget summaries
  */
 
-export type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'term' | 'annual';
+export type Frequency =
+  | 'weekly'
+  | 'fortnightly'
+  | 'monthly'
+  | 'quarterly'
+  | 'term'
+  | 'annual'
+  | 'bi-monthly';
 
 export const FREQUENCY_MULTIPLIERS: Record<Frequency, number> = {
   weekly: 52,
@@ -12,6 +19,7 @@ export const FREQUENCY_MULTIPLIERS: Record<Frequency, number> = {
   quarterly: 4,
   term: 4,
   annual: 1,
+  'bi-monthly': 6,
 };
 
 export const FREQUENCY_LABELS: Record<Frequency, string> = {
@@ -21,6 +29,7 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
   quarterly: 'Quarterly',
   term: 'Per Term',
   annual: 'Annual',
+  'bi-monthly': 'Bi-Monthly',
 };
 
 /**
@@ -207,7 +216,7 @@ export interface BudgetSummary {
 
 export interface HouseholdInput extends EntityInput {
   members?: number;
-  housing_type?: string;
+  housing_type?: string | null;
 }
 
 /**

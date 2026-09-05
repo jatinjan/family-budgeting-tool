@@ -65,7 +65,8 @@ export default function PlanningPage() {
   useReloadOnSync(loadAllData)
 
   async function loadAllData() {
-    setLoading(true)
+    // Keep the existing view mounted during background cache refreshes.
+    setLoading((isFirstLoad) => isFirstLoad)
 
     // Load children data
     const children = await db.children.toArray()

@@ -288,22 +288,37 @@ export function sanitize(input: string): string {
     .replace(/'/g, '&#039;');
 }
 
-export type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'term' | 'annual';
+export type ValidFrequency =
+  | 'weekly'
+  | 'fortnightly'
+  | 'monthly'
+  | 'quarterly'
+  | 'term'
+  | 'annual'
+  | 'bi-monthly';
 
-const VALID_FREQUENCIES: Frequency[] = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual'];
+const VALID_FREQUENCIES: ValidFrequency[] = [
+  'weekly',
+  'fortnightly',
+  'monthly',
+  'quarterly',
+  'term',
+  'annual',
+  'bi-monthly',
+];
 
 /**
  * Validate a frequency value
  * @param frequency - Frequency to validate
  * @returns Validation result
  */
-export function validateFrequency(frequency: string): ValidationResult<Frequency> {
-  const lower = frequency.toLowerCase() as Frequency;
+export function validateFrequency(frequency: string): ValidationResult<ValidFrequency> {
+  const lower = frequency.toLowerCase() as ValidFrequency;
   
   if (!VALID_FREQUENCIES.includes(lower)) {
     return { 
       valid: false, 
-      value: 'monthly' as Frequency, 
+      value: 'monthly' as ValidFrequency,
       error: 'Please select a valid frequency' 
     };
   }

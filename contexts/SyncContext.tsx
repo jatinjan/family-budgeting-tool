@@ -1,159 +1,174 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import type { GlobalSyncState, SyncContextType, SyncResult } from '@/types/sync'
-import { 
-  getSyncState, 
-  setSyncState, 
-  subscribeSyncState,
-  pushToCloud, 
-  pullFromCloud, 
-  retryFailedSync,
-  initOfflineDetection,
-  getPendingCount,
-  getLastSyncTime,
-  fullSync,
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type {
+  GlobalSyncState,
+  LegacyOwnershipAction,
+  OwnershipState,
+  SyncContextType,
+  SyncResult,
+} from '@/types/sync'
+import {
   attachSyncWriteHooks,
+  bootstrapOwnerFromCache,
+  getActiveOwnerUserId,
+  getDataRevision,
+  getLastSyncTime,
+  getOwnershipState,
+  getPendingCount,
+  getSyncState,
+  initOfflineDetection,
+  reconcileBudget,
+  resetSyncForSignedOut,
+  resolveLegacyOwnership,
+  subscribeDataRevision,
+  subscribeOwnershipState,
+  subscribeSyncState,
 } from '@/lib/sync'
 import { subscribeToFamilyBudget } from '@/lib/realtime'
 import { useAuth } from '@/contexts/AuthContext'
+import { SyncOwnershipGate } from '@/components/sync-ownership-gate'
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined)
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const [syncState, setSyncStateLocal] = useState<GlobalSyncState>('LOCAL_ONLY')
+  const [syncState, setSyncStateLocal] = useState<GlobalSyncState>(() => getSyncState())
+  const [ownershipState, setOwnershipStateLocal] = useState<OwnershipState>(() =>
+    getOwnershipState(),
+  )
+  const [dataRevision, setDataRevision] = useState(() => getDataRevision())
   const [isOnline, setIsOnline] = useState(true)
   const [pendingCount, setPendingCount] = useState(0)
   const [lastSynced, setLastSynced] = useState<Date | null>(null)
-  const { user } = useAuth()
-  const initialSyncDone = useRef(false)
+  const { user, loading: authLoading } = useAuth()
+  const initialSyncUser = useRef<string | null>(null)
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
-  }, [])
-
-  useEffect(() => {
-    const unsubscribe = subscribeSyncState((state) => {
-      setSyncStateLocal(state)
-    })
-
-    return unsubscribe
-  }, [])
-
-  useEffect(() => {
-    const cleanup = initOfflineDetection(
-      () => setIsOnline(true),
-      () => setIsOnline(false)
-    )
-
-    return cleanup
-  }, [])
-
-  useEffect(() => {
-    const updatePendingCount = async () => {
-      const count = await getPendingCount()
-      setPendingCount(count)
-    }
-
-    updatePendingCount()
-
-    const interval = setInterval(updatePendingCount, 5000)
-    return () => clearInterval(interval)
-  }, [syncState])
-
-  useEffect(() => {
-    const updateLastSynced = async () => {
-      const time = await getLastSyncTime()
-      setLastSynced(time)
-    }
-
-    if (syncState === 'SYNCED') {
-      updateLastSynced()
-    }
-  }, [syncState])
-
-  useEffect(() => {
     attachSyncWriteHooks()
   }, [])
 
   useEffect(() => {
-    if (user && !initialSyncDone.current) {
-      initialSyncDone.current = true
-      setSyncState('PENDING')
-      fullSync().catch(console.error)
-    } else if (!user) {
-      initialSyncDone.current = false
-      setSyncState('LOCAL_ONLY')
+    const unsubscribeState = subscribeSyncState(setSyncStateLocal)
+    const unsubscribeOwnership = subscribeOwnershipState(setOwnershipStateLocal)
+    const unsubscribeRevision = subscribeDataRevision(setDataRevision)
+    return () => {
+      unsubscribeState()
+      unsubscribeOwnership()
+      unsubscribeRevision()
     }
+  }, [])
+
+  useEffect(() => {
+    const cleanup = initOfflineDetection(
+      () => {
+        setIsOnline(true)
+        if (user) void reconcileBudget('reconnect')
+      },
+      () => setIsOnline(false),
+    )
+    return cleanup
+  }, [user])
+
+  useEffect(() => {
+    const updatePendingCount = async () => setPendingCount(await getPendingCount())
+    void updatePendingCount()
+    const interval = setInterval(() => void updatePendingCount(), 5000)
+    return () => clearInterval(interval)
+  }, [syncState, dataRevision])
+
+  useEffect(() => {
+    if (syncState === 'SYNCED') {
+      void getLastSyncTime().then(setLastSynced)
+    }
+  }, [syncState])
+
+  useEffect(() => {
+    if (!user) {
+      initialSyncUser.current = null
+      resetSyncForSignedOut()
+      return
+    }
+    if (initialSyncUser.current === user.id) return
+    initialSyncUser.current = user.id
+    void (async () => {
+      await bootstrapOwnerFromCache(user.id)
+      if (navigator.onLine) {
+        await reconcileBudget('login')
+      }
+    })()
   }, [user])
 
   useEffect(() => {
     if (!user) return
-
-    let pullTimer: ReturnType<typeof setTimeout> | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
     const unsubscribe = subscribeToFamilyBudget(user.id, () => {
-      if (pullTimer) clearTimeout(pullTimer)
-      pullTimer = setTimeout(() => {
-        if (getSyncState() === 'SYNCING') return
-        void getPendingCount().then((count) => {
-          if (count > 0) return
-          void pullFromCloud({ silent: true })
-        })
-      }, 250)
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => void reconcileBudget('realtime'), 250)
     })
-
     return () => {
-      if (pullTimer) clearTimeout(pullTimer)
+      if (timer) clearTimeout(timer)
       unsubscribe()
     }
   }, [user])
+
   const triggerSync = useCallback(async (): Promise<SyncResult> => {
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
-    if (!isOnline) {
-      return { success: false, error: 'You are offline' }
-    }
-
-    return pushToCloud()
+    if (!user) return { success: false, error: 'Not authenticated' }
+    if (!isOnline) return { success: false, error: 'You are offline', state: 'PENDING' }
+    return reconcileBudget('manual')
   }, [user, isOnline])
 
   const retryFailed = useCallback(async (): Promise<SyncResult> => {
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
-    if (!isOnline) {
-      return { success: false, error: 'You are offline' }
-    }
-
-    return retryFailedSync()
+    if (!user) return { success: false, error: 'Not authenticated' }
+    if (!isOnline) return { success: false, error: 'You are offline', state: 'PENDING' }
+    return reconcileBudget('retry')
   }, [user, isOnline])
 
-  const pullFromCloudFn = useCallback(async (): Promise<SyncResult> => {
-    if (!user) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
-    if (!isOnline) {
-      return { success: false, error: 'You are offline' }
-    }
-
-    return pullFromCloud()
+  const pullFromCloud = useCallback(async (): Promise<SyncResult> => {
+    if (!user) return { success: false, error: 'Not authenticated' }
+    if (!isOnline) return { success: false, error: 'You are offline', state: 'PENDING' }
+    return reconcileBudget('manual')
   }, [user, isOnline])
+
+  const resolveOwnership = useCallback(
+    async (action: LegacyOwnershipAction): Promise<SyncResult> => {
+      if (!user) return { success: false, error: 'Not authenticated' }
+      return resolveLegacyOwnership(action)
+    },
+    [user],
+  )
+
+  const value: SyncContextType = {
+    syncState,
+    isOnline,
+    pendingCount,
+    lastSynced,
+    dataRevision,
+    ownershipState,
+    triggerSync,
+    retryFailed,
+    pullFromCloud,
+    resolveLegacyOwnership: resolveOwnership,
+  }
+
+  const ownerReady =
+    Boolean(user) &&
+    ownershipState === 'READY' &&
+    getActiveOwnerUserId() === user?.id
 
   return (
-    <SyncContext.Provider value={{
-      syncState,
-      isOnline,
-      pendingCount,
-      lastSynced,
-      triggerSync,
-      retryFailed,
-      pullFromCloud: pullFromCloudFn,
-    }}>
-      {children}
+    <SyncContext.Provider value={value}>
+      {authLoading || (user && !ownerReady) ? (
+        <SyncOwnershipGate
+          recoveryRequired={!authLoading && ownershipState === 'RECOVERY_REQUIRED'}
+          onResolve={resolveOwnership}
+          syncFailed={syncState === 'FAILED'}
+          isOnline={isOnline}
+          onRetry={retryFailed}
+        />
+      ) : (
+        children
+      )}
     </SyncContext.Provider>
   )
 }

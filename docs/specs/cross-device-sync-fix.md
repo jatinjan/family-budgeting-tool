@@ -1,6 +1,6 @@
 # Cross-Device Sync Fix Specification
 
-**Status:** Ready for implementation  
+**Status:** Cloud-first implementation contract
 **Priority:** P0  
 **Dependencies:** [`sync-layer.md`](./sync-layer.md), [`balance-intention-sync.md`](./balance-intention-sync.md), [`data-migration.md`](./data-migration.md)  
 **Related:** [`balance-home.md`](./balance-home.md)
@@ -26,16 +26,21 @@ This spec is the contract for the fix. Multi-select goals and Dashboard mobile c
 | Intention survives re-login | Logged-in **Set your intention** writes `profiles`; a new device hydrates from the profile. |
 | Dexie is a cache | IndexedDB is this-browser only. Cloud is source of truth when logged in. |
 | Preserve UI labels | Push the family-app dropdown strings. If Postgres CHECK rejects them, retry with short enums. Pull reverse-maps enums back to UI labels. |
-| Login always pulls | `fullSync` is push then pull even when some local rows fail. |
-| Lists refresh after sync | Family list pages re-read Dexie when a sync cycle finishes. |
+| Owner before sync | No local budget row is pushed until the IndexedDB cache is associated with the authenticated user. |
+| Cloud is authoritative | For an authenticated user, Supabase is authoritative. Dexie is an owner-scoped cached snapshot and durable offline outbox only. |
+| Trigger-aware coordination | Login, manual sync, retry, reconnect, realtime, and local writes use one serialized coordinator with trigger-specific phases. |
+| Cloud snapshot | Bootstrap/reconnect pulls all cloud budget tables before any queued write; realtime invalidates and pulls only. |
+| Lists refresh after sync | A successful local reconciliation publishes one data revision; pages do not infer data changes from spinner state. |
 | Failed rows retry on next login | `fullSync` resets `FAILED` → `PENDING` so previously rejected children/households retry after this fix. |
+| Failed rows cannot block pull | Exhausted or invalid rows remain visible as failures, but cloud hydration continues. |
+| Deletes propagate | Local deletes create account-scoped tombstones and are applied to Supabase bottom-up. |
+| Offline conflicts | A queued mutation carries the version it was based on. The server rejects stale versions; the client must not silently overwrite newer cloud data. |
 | Single goal | Balance goals stay **one choice**. Not a sync bug. |
 
 ### 1.1 Out of scope
 
 - Multi-select Balance goals
-- Dashboard chart axis polish
-- Scoping IndexedDB by `user_id` / clearing on account switch (follow-up)
+- Dashboard chart axis polish (flicker from full-page reload on sync **is** in scope — §2.7)
 - SMTP / email
 - Admin editing intention
 
@@ -77,8 +82,12 @@ Adults push `name` + `age` (no string CHECK). Children and households push **pro
 
 ### 2.5 Login / UI
 
-- `fullSync`: reset `FAILED` → `PENDING`, **push then always pull**.
-- `useReloadOnSync` on Adults, Children, Household, category screens, Dashboard, Planning, Summary: re-run the page loader when `SYNCING` ends.
+- Resolve the authenticated owner before reading or writing the budget cache.
+- New/changed owner: quarantine unowned rows, clear the visible cache, then pull cloud before rendering family data.
+- Same owner online: hydrate cloud before sending queued mutations, then refetch after successful writes.
+- Same owner offline with a previously hydrated cache: render that cache immediately and leave mutations queued.
+- `useReloadOnSync` reacts to a **data revision**, not intermediate `SYNCING` transitions.
+- Dashboard, Planning, and Summary must **not** blank the page on background refresh. First visit may still show a loader.
 
 ### 2.6 Database (ops)
 
@@ -90,6 +99,70 @@ Run `supabase/migrations/20260901_sync_constraint_relax.sql` on the **production
 - `NOTIFY pgrst, 'reload schema'`
 
 Until this runs, CHECK retry (2.3) still lets children/households sync as short enums.
+
+Also run:
+
+- `20260904_sync_coordinator_contract.sql` for server-maintained `updated_at`
+  versions used by compare-and-swap writes.
+- `20260904_cloud_first_integrity.sql` for explicit RLS `WITH CHECK` ownership
+  and server-enforced category/item parent ownership.
+
+### 2.7 Dashboard flicker (customer app)
+
+Login `fullSync` is push then pull. Each cycle used to blank Dashboard and unmount Recharts (donut appears and disappears). Admin does not use Dexie, so admin does not flicker.
+
+---
+
+## 2.8 Account ownership and legacy recovery
+
+Dexie is one database per browser. The database therefore stores an `ownerUserId`.
+
+1. **Empty cache, no owner:** bind it to the signed-in user and hydrate cloud.
+2. **Known matching owner:** reconcile normally.
+3. **Known different owner:** quarantine the old cache, clear visible budget rows/outbox, bind the new owner, then hydrate cloud. Never upload old rows to the new user.
+4. **Legacy cache, no owner:** quarantine it and require an online cloud hydrate. Never infer ownership from partial ID overlap and never automatically upload it.
+5. Quarantined data is never displayed or uploaded while another user owns the cache.
+6. Restoring quarantined data is a supervised, dry-runnable, idempotent support operation. It is not an in-app bulk-upload button.
+
+The signup migration prompt remains the normal guest → new-account path.
+
+## 2.9 Cloud-first coordination sequence
+
+`reconcileBudget(trigger)` is serialized. One cycle has one start and one terminal state.
+
+1. Verify owner.
+2. If offline and the stored owner matches a previously hydrated cache, render the cache, keep the outbox pending, and stop.
+3. For login, reconnect, and manual refresh, pull a cloud snapshot **before** processing queued mutations.
+4. For realtime events, pull only. A remote event must never trigger an outbound write.
+5. For an explicit local write or retry, process only owner-scoped queued mutations.
+6. Process DELETE mutations bottom-up: items → categories → entities.
+7. Process create/update mutations top-down: entities → categories → items.
+8. Every mutation has a stable client operation ID and expected server version. Replaying it is idempotent; a stale version returns a conflict instead of overwriting cloud state.
+9. Missing parent identity is a typed dependency failure, not a silent skip.
+10. Pull households, adults, children, categories, and expense items for `auth.uid()` and validate all parent links.
+11. In one Dexie transaction:
+   - upsert cloud rows;
+   - remove stale **synced** local rows absent from the cloud snapshot, bottom-up;
+   - retain unresolved outbox operations separately from the cached snapshot.
+12. Publish one `dataRevision`.
+13. Terminal state is `SYNCED`, `PENDING`, `FAILED`, or `CONFLICT` with per-operation reasons.
+
+Cloud hydration always runs even when one queued mutation fails. Permanently failed operations do not block reads.
+
+## 2.10 Triggers and observability
+
+All triggers call the same coordinator:
+
+| Trigger | Required mode |
+|---|---|
+| Login | owner check + cloud pull → queued writes → cloud refetch |
+| Manual cloud button | cloud pull → queued writes → cloud refetch |
+| Retry | cloud pull → retry eligible operations → cloud refetch |
+| Browser online | cloud pull → queued writes → cloud refetch |
+| Realtime event | coalesced cloud pull only |
+| Local write | online cloud write first; otherwise durable outbox operation |
+
+Each development cycle logs: cycle id, trigger, owner id suffix, per-table pushed/pulled/deleted/skipped/failed counts, duration, and final state. Logs must not contain names, email, costs, or access tokens.
 
 ---
 
@@ -147,6 +220,8 @@ Do **not** auto write-through Dexie → profile on load. Settings are not accoun
 | `contexts/AuthContext.tsx` | Do not wipe profile on fetch error |
 | `app/page.tsx` | Dual-write + hydrate + save errors |
 | `supabase/migrations/20260901_sync_constraint_relax.sql` | Ops SQL |
+| `supabase/migrations/20260904_sync_coordinator_contract.sql` | Server row versions |
+| `supabase/migrations/20260904_cloud_first_integrity.sql` | Parent ownership + write RLS |
 | `scripts/verify-sync-field-map.mjs` | Static checks |
 | `scripts/verify-cross-device-sync-fix.mjs` | Spec + wiring checks |
 | `scripts/verify-balance-intention-sync.mjs` | Existing intention checks |
@@ -158,6 +233,20 @@ Do **not** auto write-through Dexie → profile on load. Settings are not accoun
 - [ ] `node scripts/verify-cross-device-sync-fix.mjs` passes
 - [ ] `node scripts/verify-sync-field-map.mjs` passes
 - [ ] `node scripts/verify-balance-intention-sync.mjs` passes
+- [ ] `node scripts/test-sync-policy.mjs` passes
+- [ ] Automated clean-device test: desktop create → phone hydrate
+- [ ] Automated reverse update: phone edit → desktop refresh
+- [ ] Failed child/category does not block unrelated cloud pull
+- [ ] Same-browser account switch displays no previous-family data
+- [ ] Delete on one device disappears on the other
+- [ ] Replaying each outbox operation three times produces one cloud effect
+- [ ] A stale expected version returns `CONFLICT` and cannot overwrite the newer cloud row
+- [ ] Missing parent produces a visible typed failure
+- [ ] Realtime performs no inserts, updates, or deletes and increments one data revision after pull
+- [ ] Matching-owner cache opens after an offline reload without an ownership spinner
+- [ ] Legacy unowned data is quarantined and cannot be automatically uploaded
+- [ ] Dashboard, Planning, and Summary charts stay mounted during sync
+- [ ] Balance intention hydrates on a clean second device
 - [ ] `npm run build` succeeds
 - [ ] `20260901_sync_constraint_relax.sql` run on production
 - [ ] Source device (already filled in) opened online after deploy; failed rows retry
@@ -180,18 +269,26 @@ select id, name, housing_type, members from households where user_id = '<profile
 
 ## 6. Implementation order
 
-1. Spec + index README
-2. Field map + sync push/pull + always-pull + list reload
-3. Intention save/hydrate harden
-4. Constraint-relax migration file
-5. Verify scripts + build
-6. Run SQL on production, deploy, then client retry on the **source** device
+1. Lock this cloud-first contract and make `supabase/schema.sql` canonical.
+2. Stabilize ownership: matching caches open offline; unowned caches quarantine.
+3. Make login/reconnect/manual pull-first and realtime pull-only.
+4. Add stable client UUIDs and expected-`updated_at` compare-and-swap writes.
+5. Enforce parent ownership and write ownership in PostgreSQL.
+6. Put customer reads/writes behind a typed budget repository, then migrate
+   routes incrementally from direct Dexie access.
+7. Replace source-string checks with two-context integration tests.
+8. Apply migrations in Preview, run the acceptance matrix, canary Niral plus
+   one internal account, then deploy broadly.
 
 ---
 
 ## 7. Client retry (after deploy)
 
-Open the app **on the device that already has the data**, stay online until sync is not failed, then refresh the other device. Tap **Set your intention** once and confirm Saved.
+After the cloud-first release, first verify the cloud backup and row counts.
+Open the account online on one device, wait for the cloud hydrate, then open
+the second device. Do not use an automatic “device data” import; legacy recovery
+must be supervised and idempotent. Tap **Set your intention** once and confirm
+Saved.
 
 Draft:
 

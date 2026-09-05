@@ -37,7 +37,12 @@ function assert(name, condition) {
 assert('Spec indexed', readme.includes('balance-intention-sync.md'))
 assert('Migration adds three columns', migration.includes('balance_goal') && migration.includes('yearly_savings_goal') && migration.includes('monthly_buffer'))
 assert('Types include profile columns', types.includes('balance_goal') && types.includes('yearly_savings_goal') && types.includes('monthly_buffer'))
-assert('updateProfile accepts intention', supabaseLib.includes('balance_goal') && supabaseLib.includes('yearly_savings_goal'))
+assert(
+  'updateProfile accepts intention',
+  updateFn.includes("profiles']['Update']") &&
+    types.includes('balance_goal') &&
+    types.includes('yearly_savings_goal'),
+)
 assert('Mapping helpers exist', balanceLib.includes('intentionFromProfile') && balanceLib.includes('intentionToCloud'))
 assert('Page dual-writes cloud', page.includes('updateProfile') && page.includes('intentionToCloud') && page.includes('refreshProfile'))
 assert('Page hydrates from profile', page.includes('intentionFromProfile'))

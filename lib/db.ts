@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from "dexie"
-import type { SyncMeta, SyncStatus } from "@/types/sync"
+import type { SyncFailureCode, SyncStatus } from "@/types/sync"
 
 // Sync metadata mixin for all syncable records
 export interface SyncableFields {
@@ -8,6 +8,10 @@ export interface SyncableFields {
   lastSynced: number | null
   syncAttempts: number
   cloudId: string | null
+  serverUpdatedAt?: string | null
+  pendingOperation?: "CREATE" | "UPDATE" | null
+  syncErrorCode?: SyncFailureCode | null
+  syncErrorMessage?: string | null
 }
 
 export interface Child extends Partial<SyncableFields> {
@@ -67,12 +71,21 @@ export interface HouseholdCategory extends Partial<SyncableFields> {
   order: number
 }
 
+export type BudgetFrequency =
+  | "weekly"
+  | "fortnightly"
+  | "monthly"
+  | "quarterly"
+  | "term"
+  | "annual"
+  | "bi-monthly"
+
 export interface ExpenseItem extends Partial<SyncableFields> {
   id?: number
   categoryId: number
   name: string
   cost: number
-  frequency: "monthly" | "term" | "annual" | "weekly"
+  frequency: BudgetFrequency
   quantity: number
   total: number
   needWant?: "need" | "want"
@@ -84,7 +97,7 @@ export interface AdultExpenseItem extends Partial<SyncableFields> {
   categoryId: number
   name: string
   cost: number
-  frequency: "monthly" | "quarterly" | "annual" | "weekly" | "bi-monthly"
+  frequency: BudgetFrequency
   quantity: number
   total: number
   needWant?: "need" | "want"
@@ -96,7 +109,7 @@ export interface HouseholdExpenseItem extends Partial<SyncableFields> {
   categoryId: number
   name: string
   cost: number
-  frequency: "monthly" | "quarterly" | "annual" | "weekly" | "bi-monthly"
+  frequency: BudgetFrequency
   quantity: number
   total: number
   needWant?: "need" | "want"
@@ -114,8 +127,19 @@ export interface SyncQueue {
   operation: "INSERT" | "UPDATE" | "DELETE"
   recordId: number
   cloudId: string | null
+  ownerUserId: string
+  expectedUpdatedAt?: string | null
   timestamp: number
   attempts: number
+  lastError?: string | null
+}
+
+export interface QuarantineSnapshot {
+  id: string
+  ownerUserId: string | null
+  createdAt: number
+  reason: "ACCOUNT_SWITCH" | "LEGACY_CLOUD_RESET"
+  data: string
 }
 
 const db = new Dexie("FamilyBudgetingApp") as Dexie & {
@@ -130,6 +154,7 @@ const db = new Dexie("FamilyBudgetingApp") as Dexie & {
   householdItems: EntityTable<HouseholdExpenseItem, "id">
   settings: EntityTable<Settings, "key">
   syncQueue: EntityTable<SyncQueue, "id">
+  quarantineSnapshots: EntityTable<QuarantineSnapshot, "id">
 }
 
 // Schema definition - version 1 (original)
@@ -184,6 +209,22 @@ db.version(2).stores({
     addSyncMeta(tx.table("householdCategories")),
     addSyncMeta(tx.table("householdItems")),
   ])
+})
+
+// Schema definition - version 3 (account boundary and delete outbox)
+db.version(3).stores({
+  children: "++id, name, age, schoolLevel, region, createdAt, syncStatus, cloudId",
+  categories: "++id, childId, name, order, syncStatus, cloudId",
+  items: "++id, categoryId, name, frequency, needWant, adjustedTotal, syncStatus, cloudId",
+  adults: "++id, name, age, createdAt, syncStatus, cloudId",
+  adultCategories: "++id, adultId, name, order, syncStatus, cloudId",
+  adultItems: "++id, categoryId, name, frequency, needWant, adjustedTotal, syncStatus, cloudId",
+  households: "++id, name, housingType, members, createdAt, syncStatus, cloudId",
+  householdCategories: "++id, householdId, name, order, syncStatus, cloudId",
+  householdItems: "++id, categoryId, name, frequency, needWant, adjustedTotal, syncStatus, cloudId",
+  settings: "key",
+  syncQueue: "++id, ownerUserId, [ownerUserId+operation], table, operation, recordId, cloudId, timestamp",
+  quarantineSnapshots: "id, ownerUserId, createdAt",
 })
 
 export { db }
@@ -554,7 +595,7 @@ export const defaultCategories = [
 // Helper function to calculate annual cost
 export function calculateAnnualCost(
   cost: number,
-  frequency: "monthly" | "term" | "annual" | "weekly" | "quarterly" | "bi-monthly",
+  frequency: BudgetFrequency,
   quantity: number,
 ): number {
   switch (frequency) {
@@ -1350,7 +1391,7 @@ export async function initializeChildData(childId: number) {
     if (categoryTemplate.isPercentageBased && categoryTemplate.percentageValue) {
       const otherCategoriesTotal = await db.items
         .where("categoryId")
-        .notEqual(categoryId)
+        .notEqual(categoryId as number)
         .toArray()
         .then((items) => items.reduce((acc, item) => acc + item.total, 0))
 
@@ -1399,7 +1440,7 @@ export async function initializeAdultData(adultId: number) {
     if (categoryTemplate.isPercentageBased && categoryTemplate.percentageValue) {
       const otherCategoriesTotal = await db.adultItems
         .where("categoryId")
-        .notEqual(categoryId)
+        .notEqual(categoryId as number)
         .toArray()
         .then((items) => items.reduce((acc, item) => acc + item.total, 0))
 
@@ -1448,7 +1489,7 @@ export async function initializeHouseholdData(householdId: number) {
     if (categoryTemplate.isPercentageBased && categoryTemplate.percentageValue) {
       const otherCategoriesTotal = await db.householdItems
         .where("categoryId")
-        .notEqual(categoryId)
+        .notEqual(categoryId as number)
         .toArray()
         .then((items) => items.reduce((acc, item) => acc + item.total, 0))
 

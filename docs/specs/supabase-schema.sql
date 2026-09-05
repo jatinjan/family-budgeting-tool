@@ -1,8 +1,9 @@
 -- =====================================================
 -- My Balanced Family Finances — Supabase Schema
 -- =====================================================
--- Run this SQL in Supabase SQL Editor (Dashboard → SQL Editor → New query)
--- This script is idempotent — safe to run multiple times
+-- LEGACY SPEC SNAPSHOT — DO NOT RUN FOR DEPLOYMENTS.
+-- Canonical fresh-install schema: ../../supabase/schema.sql
+-- Canonical production changes: ../../supabase/migrations/*.sql
 -- =====================================================
 
 -- =====================================================
@@ -189,7 +190,7 @@ CREATE TABLE IF NOT EXISTS expense_items (
   name TEXT NOT NULL,
   cost NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
   frequency TEXT NOT NULL DEFAULT 'monthly' 
-    CHECK (frequency IN ('weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual')),
+    CHECK (frequency IN ('weekly', 'fortnightly', 'monthly', 'quarterly', 'term', 'annual', 'bi-monthly')),
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
   total NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total >= 0),
   need_want TEXT CHECK (need_want IS NULL OR need_want IN ('need', 'want')),
