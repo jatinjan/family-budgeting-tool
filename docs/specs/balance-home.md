@@ -3,7 +3,7 @@
 **Status:** Implemented — Balance `/` matches this draft. Confirm guest + logged-in locally before push.  
 **Priority:** P0  
 **Dependencies:** Auth (`useAuth`), IndexedDB `settings`, hybrid nav ([`app-navigation.md`](./app-navigation.md))  
-**Related:** [`auth-flow.md`](./auth-flow.md) (guest Sign in / Sign up), client v0 Balance UI (`Niral_mbff-v0-ui`)
+**Related:** [`auth-flow.md`](./auth-flow.md), [`soft-launch-invite.md`](./soft-launch-invite.md) (guest Sign in + Register Now), client v0 Balance UI (`Niral_mbff-v0-ui`)
 
 ---
 
@@ -25,7 +25,7 @@ Do **not** replace production with the v0 repo wholesale.
 | Logged-in persists locally + cloud | Dexie cache + Supabase `profiles` — see [`balance-intention-sync.md`](./balance-intention-sync.md). |
 | No Start Planning CTA | Bottom **Start Planning** button is removed; users continue via Family nav. |
 | Keep hybrid nav | Top/bottom chrome from [`app-navigation.md`](./app-navigation.md). Do not import v0 bottom-nav labels. |
-| Keep PageHeader | App name / tagline; guest Sign in / Sign up; mobile Sign out when logged in. |
+| Keep PageHeader | App name / tagline; guest **Sign in** only (Sign up hidden for soft launch); mobile Sign out when logged in. |
 | Shared copy lists | Goal options and How-it-works steps live in `lib/balance-home.ts`. |
 
 ### 1.1 Out of scope
@@ -45,8 +45,8 @@ Cloud sync + admin read for intention: [`balance-intention-sync.md`](./balance-i
 
 - See full Balance UI (welcome, goals, intention fields, steps, CTA).
 - May select goals and type amounts in React state only.
-- **Set your intention** → `/signup` (primary). PageHeader still offers Sign in / Sign up.
-- Optional helper text near the intention button: sign up or sign in to save your intention.
+- **Set your intention** → `/login` (must already have an account). PageHeader offers Sign in only.
+- Helper text: **Register Now** (marketing interest form) for interest, or **Sign In** to save your intention.
 
 ### 2.2 Logged in
 
@@ -122,7 +122,7 @@ Plus UI option **Something else** (not stored as that label — store the custom
 - [ ] Spec indexed in README  
 - [ ] Guest `/` shows new sections (goals, intention, How My BFF works)  
 - [ ] Guest has no bottom/top family chrome (nav spec)  
-- [ ] Guest Set intention → `/signup`  
+- [ ] Guest Set intention → `/login`  
 - [ ] Logged-in can save intention; Saved indicator appears  
 - [ ] No Start Planning button on Balance  
 - [ ] Reload logged-in restores saved goal / amounts  

@@ -50,7 +50,7 @@ const PLAN_PRICES: Record<PlanType, { label: string; price: string; period: stri
 
 async function validatePromoCode(code: string): Promise<PromoResult> {
   if (!code.trim()) {
-    return { valid: false, message: "" }
+    return { valid: false, message: "A promo code is required" }
   }
 
   const { data: promo, error } = await supabase
@@ -123,13 +123,24 @@ export default function SignUpPage() {
     setIsSubmitting(true)
     
     try {
+      let applied = promoResult
+      if (!applied?.valid) {
+        applied = await validatePromoCode(promoCode)
+        setPromoResult(applied)
+      }
+      if (!applied?.valid || !applied.promo) {
+        setError(applied?.message || "A valid promo code is required to create an account.")
+        setIsSubmitting(false)
+        return
+      }
+
       // Sign up with Supabase
       const { error: signUpError, needsEmailConfirmation } = await signUp(
         email.trim().toLowerCase(),
         password,
         {
           family_name: familyName.trim(),
-          promo_code_used: promoResult?.valid ? promoResult.promo?.code : undefined,
+          promo_code_used: applied.promo.code,
         }
       )
 
@@ -146,10 +157,7 @@ export default function SignUpPage() {
         return
       }
 
-      // If promo code was used, increment redemption count
-      if (promoResult?.valid && promoResult.promo) {
-        await supabase.rpc('redeem_promo_code', { code_input: promoResult.promo.code })
-      }
+      await supabase.rpc('redeem_promo_code', { code_input: applied.promo.code })
 
       // Check for existing local data (only when session exists)
       const dataSummary = await checkLocalData()
@@ -464,11 +472,11 @@ export default function SignUpPage() {
                 />
               </div>
 
-              {/* Promo code */}
+              {/* Promo code — required for soft launch (invite / Founding20) */}
               <div className="space-y-2">
                 <Label htmlFor="promo" style={{ color: BRAND.charcoal }}>
                   Promo code
-                  <span className="text-gray-400 font-normal"> (optional)</span>
+                  <span className="text-red-500"> *</span>
                 </Label>
                 <div className="flex gap-2">
                   <Input
@@ -478,8 +486,10 @@ export default function SignUpPage() {
                       setPromoCode(e.target.value.toUpperCase())
                       setPromoResult(null)
                     }}
-                    placeholder="e.g., FOUNDING"
+                    placeholder="e.g., FOUNDING20"
                     className="border-gray-200 font-mono uppercase"
+                    required
+                    autoComplete="off"
                   />
                   <Button
                     type="button"
@@ -548,7 +558,7 @@ export default function SignUpPage() {
                 size="lg"
                 className="w-full gap-2 text-white mt-2"
                 style={{ backgroundColor: BRAND.deepTeal }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !promoCode.trim()}
               >
                 {isSubmitting ? (
                   <>

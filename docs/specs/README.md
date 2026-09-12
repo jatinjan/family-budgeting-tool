@@ -24,6 +24,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`planning-sheet.md`](./planning-sheet.md) | Which Planning categories get Current/Forward vs Need/Want | P0 |
 | [`app-navigation.md`](./app-navigation.md) | Hybrid family nav: top bar desktop, bottom nav + Family sheet mobile | P0 |
 | [`balance-home.md`](./balance-home.md) | Balance `/` intention home (goals, saving intention) from client draft | P0 |
+| [`soft-launch-invite.md`](./soft-launch-invite.md) | Soft launch: Register Now + Sign In public CTAs; promo required on `/signup`; FOUNDING20 | P0 |
 | [`balance-intention-sync.md`](./balance-intention-sync.md) | Sync Balance goals to profiles + admin read-only view | P0 |
 | [`cross-device-sync-fix.md`](./cross-device-sync-fix.md) | Adults-only sync + blank Balance intention on a second device | P0 |
 | [`dashboard-category-bars.md`](./dashboard-category-bars.md) | Full-width horizontal category totals on Dashboard (desktop + mobile) | P1 |
@@ -195,6 +196,14 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `lib/balance-home.ts` — Goals, how-it-works steps, setting keys
 - `app/page.tsx` — Balance intention home (replaces marketing draft)
 
+### soft-launch-invite.md
+- `lib/config.ts` — `REGISTER_NOW_URL` (Wix interest form)
+- `components/page-header.tsx` — Guest Sign in only
+- `app/page.tsx` — Register Now / Sign In helper
+- `app/login/page.tsx` — Register Now footer
+- `app/signup/page.tsx` — Promo required
+- `supabase/diagnostics/20260912_founding20_promo.sql` — FOUNDING20 seed
+
 ### balance-intention-sync.md
 - `supabase/migrations/20260830_balance_intention.sql` — profiles columns
 - `lib/supabase.ts` — `updateProfile` intention fields
@@ -244,7 +253,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 After implementing all specs, verify:
 
-- [ ] New user can sign up with promo code
+- [ ] New user can sign up only with a valid promo code (soft-launch-invite)
+- [ ] Guest Balance / login do not link to `/signup`; Register Now opens the Wix form
 - [ ] User can sign in and see synced data
 - [ ] Data persists across sessions
 - [ ] Offline edits sync when back online

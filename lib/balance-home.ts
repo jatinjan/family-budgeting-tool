@@ -32,8 +32,8 @@ export const BALANCE_HOW_IT_WORKS_STEPS = [
   'See your potential savings and the impact of your choices.',
 ] as const
 
-/** Guest save intention destination. */
-export const BALANCE_GUEST_AUTH_PATH = '/signup'
+/** Guest save intention destination — sign in to persist; Register Now is interest only. */
+export const BALANCE_GUEST_AUTH_PATH = '/login'
 
 export function isPresetBalanceGoal(value: string): value is BalanceGoal {
   return (BALANCE_GOALS as readonly string[]).includes(value)

@@ -30,14 +30,15 @@ const goals = [
   'Improve communication about money',
 ]
 
-assert('Spec indexed', readme.includes('balance-home.md'))
+assert('Spec indexed', readme.includes('balance-home.md') && readme.includes('soft-launch-invite.md'))
 assert('Spec describes replace marketing home', /welcome|intention|goals/i.test(spec))
 for (const g of goals) {
   assert(`Goal list includes ${g}`, lists.includes(g))
 }
 assert('Five how-it-works steps', (lists.match(/Add your known expenses|Add estimates|Review your total|Explore adjustments|See your potential/g) || []).length === 5)
 assert('Setting keys locked', lists.includes('balanceGoal') && lists.includes('yearlySavingsGoal') && lists.includes('monthlyBuffer'))
-assert('Guest auth path is signup', lists.includes("'/signup'") || lists.includes('"/signup"'))
+assert('Guest auth path is login', lists.includes("'/login'") || lists.includes('"/login"'))
+assert('Register Now helper on Balance', page.includes('Register Now') && page.includes('REGISTER_NOW_URL') && page.includes('Sign In'))
 assert('Page uses shared module', page.includes('BALANCE_GOALS') && page.includes('from "@/lib/balance-home"') || page.includes("from '@/lib/balance-home'"))
 assert('Page is client Balance', page.includes('use client') && page.includes('What matters most'))
 assert('Old marketing cards gone', !page.includes('A clearer picture of your year') && !page.includes('Plan with purpose'))

@@ -4,6 +4,11 @@ export const APP_CONFIG = {
   CTA_TEXT: "Book a Free Workshop",
   CTA_URL: "#workshop",
   LOCATION: "Australia",
+  /**
+   * Kate’s Wix interest form (Register Now lightbox `zgssi`).
+   * Soft launch: public CTAs collect interest here; /signup stays invite-only via promo.
+   */
+  REGISTER_NOW_URL: "https://www.mybalancedfamilyfinances.com.au/?lightbox=zgssi",
   CURRENCY: {
     code: "AUD",
     symbol: "$",

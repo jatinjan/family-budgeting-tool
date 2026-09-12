@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PageHeader } from "@/components/page-header"
 import { useAuth } from "@/contexts/AuthContext"
+import { APP_CONFIG } from "@/lib/config"
 import { db } from "@/lib/db"
 import { updateProfile } from "@/lib/supabase"
 import {
@@ -317,11 +318,15 @@ export default function BalancePage() {
                 onClick={handleSetIntention}
                 disabled={!resolvedGoal || saving}
                 className="gap-2"
+                data-testid="intention-save"
               >
                 Set your intention
               </Button>
               {intentionSet && isLoggedIn && !saveError ? (
-                <span className="flex items-center gap-1.5 text-sm text-primary">
+                <span
+                  className="flex items-center gap-1.5 text-sm text-primary"
+                  data-testid="intention-saved"
+                >
                   <Check className="h-4 w-4" /> Saved
                 </span>
               ) : null}
@@ -333,18 +338,20 @@ export default function BalancePage() {
             ) : null}
             {!isLoggedIn && !authLoading ? (
               <p className="mt-3 text-xs font-normal text-muted-foreground">
-                <Link
-                  href="/signup"
+                <a
+                  href={APP_CONFIG.REGISTER_NOW_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary underline underline-offset-4 hover:text-primary/80"
                 >
-                  Sign up
-                </Link>{" "}
-                or{" "}
+                  Register Now
+                </a>{" "}
+                for interest or{" "}
                 <Link
                   href="/login"
                   className="text-primary underline underline-offset-4 hover:text-primary/80"
                 >
-                  sign in
+                  Sign In
                 </Link>{" "}
                 to save your intention.
               </p>

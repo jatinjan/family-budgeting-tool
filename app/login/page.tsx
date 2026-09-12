@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/AuthContext"
-import { POST_LOGIN_PATH, safeInternalPath } from "@/lib/config"
+import { APP_CONFIG, POST_LOGIN_PATH, safeInternalPath } from "@/lib/config"
 import { Heart, Loader2, AlertCircle } from "lucide-react"
 
 const BRAND = {
@@ -202,16 +202,18 @@ function LoginPageContent() {
           </CardContent>
         </Card>
 
-        {/* Sign up link */}
         <p className="mt-4 text-center text-sm text-gray-500">
-          Don't have an account?{" "}
-          <button
-            onClick={() => router.push("/signup")}
+          Don&apos;t have an account?{" "}
+          <a
+            href={APP_CONFIG.REGISTER_NOW_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="font-medium underline underline-offset-4"
             style={{ color: BRAND.deepTeal }}
           >
-            Sign up
-          </button>
+            Register Now
+          </a>{" "}
+          for interest
         </p>
       </div>
     </div>

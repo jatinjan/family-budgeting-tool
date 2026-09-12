@@ -584,6 +584,7 @@ CREATE POLICY "Admins can view all activity"
 -- =====================================================
 INSERT INTO promo_codes (code, description, max_redemptions, status) VALUES
   ('FOUNDING', 'Founding member access', 100, 'active'),
+  ('FOUNDING20', 'Soft launch founding family access', 50, 'active'),
   ('LAUNCH2026', 'Launch day promotional code', 50, 'active'),
   ('WORKSHOP', 'Workshop attendee code', 200, 'active'),
   ('COACH', 'Financial coach referral', NULL, 'active')

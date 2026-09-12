@@ -8,7 +8,7 @@
 
 ## Overview
 
-This spec defines the complete authentication flow using Supabase Auth with email/password. All users get free access (Founding Members, invite only).
+This spec defines the complete authentication flow using Supabase Auth with email/password. Soft launch is invite-only via promo — see [`soft-launch-invite.md`](./soft-launch-invite.md). All users who redeem a valid code get free access (Founding Members).
 
 ---
 
@@ -28,7 +28,7 @@ This spec defines the complete authentication flow using Supabase Auth with emai
 | `email`       | string | Valid email format         | Yes                 |
 | `password`    | string | Min 8 chars                | Yes                 |
 | `family_name` | string | Non-empty after trim       | Yes                 |
-| `promo_code`  | string | Valid in promo_codes table | No (but encouraged) |
+| `promo_code`  | string | Valid in promo_codes table | **Yes** (soft launch) |
 
 
 
@@ -36,12 +36,12 @@ This spec defines the complete authentication flow using Supabase Auth with emai
 ### 1.3 Implementation Steps
 
 ```typescript
-// 1. Validate promo code (if provided)
+// 1. Promo code is required
 const { data: promoValid } = await supabase
   .rpc('validate_promo_code', { code_input: promoCode });
 
-if (promoCode && !promoValid?.[0]?.valid) {
-  setError('Invalid promo code');
+if (!promoCode?.trim() || !promoValid?.[0]?.valid) {
+  setError('A valid promo code is required');
   return;
 }
 
@@ -87,6 +87,7 @@ router.push('/household');
 | Error                    | Message                                     | Recovery                 |
 | ------------------------ | ------------------------------------------- | ------------------------ |
 | Email already registered | "An account with this email already exists" | Link to /login           |
+| Promo code missing       | "A valid promo code is required"            | Focus promo field        |
 | Invalid promo code       | "This promo code is invalid or expired"     | Clear promo field        |
 | Weak password            | "Password must be at least 8 characters"    | Highlight password field |
 | Network error            | "Unable to connect. Please try again."      | Show retry button        |

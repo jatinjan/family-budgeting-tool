@@ -53,11 +53,8 @@ export function PageHeader() {
       </p>
       {!loading && !user && (
         <div className="mt-4 flex items-center justify-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/login">Sign in</Link>
-          </Button>
           <Button asChild size="sm">
-            <Link href="/signup">Sign up</Link>
+            <Link href="/login">Sign in</Link>
           </Button>
         </div>
       )}

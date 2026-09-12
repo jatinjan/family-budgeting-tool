@@ -399,6 +399,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =====================================================
 INSERT INTO promo_codes (code, description, max_redemptions, status) VALUES
   ('FOUNDING', 'Founding member access', 20, 'active'),
+  ('FOUNDING20', 'Soft launch founding family access', 50, 'active'),
   ('LAUNCH2026', 'Launch day code', 50, 'active'),
   ('WORKSHOP', 'Workshop attendee code', 100, 'active')
 ON CONFLICT (code) DO NOTHING;
