@@ -73,7 +73,7 @@ Exact wording:
 ### 2.4 Signup promo field
 
 - Label: **Promo code** with required marker `*`
-- Placeholder: `e.g., FOUNDING20`
+- Placeholder: `Enter your code` (do not show the live cohort code)
 - Empty / invalid: block create; message **A valid promo code is required** or the existing invalid/expired/limit messages
 
 ---

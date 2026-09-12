@@ -486,7 +486,7 @@ export default function SignUpPage() {
                       setPromoCode(e.target.value.toUpperCase())
                       setPromoResult(null)
                     }}
-                    placeholder="e.g., FOUNDING20"
+                    placeholder="Enter your code"
                     className="border-gray-200 font-mono uppercase"
                     required
                     autoComplete="off"
