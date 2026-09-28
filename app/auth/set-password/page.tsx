@@ -105,7 +105,7 @@ export default function SetPasswordPage() {
             <div className="space-y-4">
               <p className="text-sm text-destructive">{linkError}</p>
               <p className="text-sm text-muted-foreground">
-                Ask your coach to resend the invite, or use &quot;Forgot password&quot; on the sign-in page.
+                Use Forgot your password on the sign-in page, or ask your coach to resend the invite.
               </p>
               <Button asChild variant="outline" className="w-full">
                 <a href="/login">Go to sign in</a>

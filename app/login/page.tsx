@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/AuthContext"
+import { supabase } from "@/lib/supabase"
 import { APP_CONFIG, POST_LOGIN_PATH, safeInternalPath } from "@/lib/config"
 import { Heart, Loader2, AlertCircle } from "lucide-react"
 
@@ -37,6 +38,8 @@ function LoginPageContent() {
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetSending, setResetSending] = useState(false)
 
   // Show callback failure from email confirmation link
   useEffect(() => {
@@ -184,20 +187,40 @@ function LoginPageContent() {
                 )}
               </Button>
 
-              {/* Forgot password */}
-              <p className="text-center text-sm text-gray-500">
-                <button
-                  type="button"
-                  className="font-medium underline underline-offset-4"
-                  style={{ color: BRAND.deepTeal }}
-                  onClick={() => {
-                    // TODO: Implement forgot password
-                    alert("Password reset coming soon!")
-                  }}
-                >
-                  Forgot your password?
-                </button>
-              </p>
+              {resetSent ? (
+                <p className="text-center text-sm" style={{ color: BRAND.deepTeal }}>
+                  Check that inbox for a link to set a new password.
+                </p>
+              ) : (
+                <p className="text-center text-sm text-gray-500">
+                  <button
+                    type="button"
+                    className="font-medium underline underline-offset-4"
+                    style={{ color: BRAND.deepTeal }}
+                    disabled={resetSending}
+                    onClick={async () => {
+                      const address = email.trim().toLowerCase()
+                      if (!address) {
+                        setError("Enter your email first, then click Forgot your password.")
+                        return
+                      }
+                      setError(null)
+                      setResetSending(true)
+                      const { error: resetError } = await supabase.auth.resetPasswordForEmail(address, {
+                        redirectTo: `${window.location.origin}/auth/set-password`,
+                      })
+                      setResetSending(false)
+                      if (resetError) {
+                        setError(resetError.message)
+                        return
+                      }
+                      setResetSent(true)
+                    }}
+                  >
+                    {resetSending ? "Sending…" : "Forgot your password?"}
+                  </button>
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>

@@ -268,6 +268,7 @@ Map Supabase `email_not_confirmed` / “Email not confirmed” to that message i
 
 ```
 /login page → Enter credentials → Authenticate → Sync data → Redirect to / (Balance)
+/login page → Forgot your password? → email → /auth/set-password (see §5)
 ```
 
 
@@ -450,31 +451,91 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 
 
-## 5. Password Reset (Future)
+## 5. Password reset
 
+**Status:** Implemented — same page as coach invite password setup ([`coach-editing.md`](./coach-editing.md) §5.1)
 
+Supabase does not store the plaintext password. Reset is always "send a link, then set a new password". Coach **Send invite** uses the same Supabase recovery email. There is one family page: `/auth/set-password`. There is no `/reset-password` route.
 
-### 5.1 Request Reset
+### 5.1 User journeys
 
-```typescript
-const { error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${window.location.origin}/reset-password`,
-});
+**A. Family forgot password**
+
+```
+/login → enter email → Forgot your password?
+  → Supabase recovery email (redirectTo = {origin}/auth/set-password)
+  → /auth/set-password → new password (min 8) → /
 ```
 
+**B. Coach invite (unclaimed family)**  
+Admin **Send invite** → same email template → `/auth/set-password` → `/` → `claim_family_budget()`.
 
+**C. Recovery email from the Supabase dashboard**  
+Dashboard uses **Site URL** (`https://mybalancedfamilyfinances.com`), not `/auth/set-password`. The app must detect `type=recovery` on any other path and keep the query/hash while sending the browser to `/auth/set-password`.
 
-### 5.2 Complete Reset
+### 5.2 `/login` request
+
+- Control: **Forgot your password?** under the sign-in form. Not a stub, not an alert.
+- Email: the address already in the email field, trimmed and lowercased. If empty: **"Enter your email first, then click Forgot your password."**
+- Call:
 
 ```typescript
-const { error } = await supabase.auth.updateUser({
-  password: newPassword,
-});
+await supabase.auth.resetPasswordForEmail(email, {
+  redirectTo: `${window.location.origin}/auth/set-password`,
+})
 ```
+
+- Success (always the same copy, whether or not the email exists): **"Check that inbox for a link to set a new password."**
+- Failure: show the Supabase error (rate limit, SMTP). Stay on `/login`.
+- Do not reveal "no account with that email".
+
+**Out of scope:** `/admin/login` Forgot password stays disabled. An admin resets via family `/login` with that email, or via the Auth dashboard (journey C).
+
+### 5.3 `/auth/set-password`
+
+Public route (middleware). No session required to open the page; the link creates the recovery session.
+
+**Establish session** (in this order):
+
+1. `#error_description` or `?error_description` → invalid, show the message
+2. Hash `access_token` + `refresh_token` → `setSession`
+3. Query `token_hash` + `type` → `verifyOtp`
+4. Query `code` → `exchangeCodeForSession`
+5. Else if a session already exists (open tab) → ready
+6. Else → invalid: **"This link has expired or was already used."**
+
+After a successful token consume, `history.replaceState` so the tokens leave the URL.
+
+**Form:** new password + confirm. Rules: [`validatePassword`](../../lib/utils/validators.ts) (min 8, max 128) and `validatePasswordConfirmation`. Then `supabase.auth.updateUser({ password })`. Full navigation to `/` so auth, sync, and coach claim boot cleanly.
+
+**Invalid link copy:** **"Use Forgot your password on the sign-in page, or ask your coach to resend the invite."** + **Go to sign in** → `/login`.
+
+**Do not** send a recovery session from `/login` or `/` into the normal post-login redirect. That skips setting a password. Catch `type=recovery` first.
+
+### 5.4 Auth callback
+
+`GET /auth/callback`: if `type=recovery` and `next` is absent, redirect to `/auth/set-password` after `verifyOtp` / code exchange. Confirmation emails still default to `/household` (then the family home).
+
+### 5.5 Ops
+
+| Setting | Value |
+| ------- | ----- |
+| Redirect URLs | `https://mybalancedfamilyfinances.com/**` already covers `/auth/set-password` |
+| Email template | Shared "Reset password" template. Neutral wording: set your password for My Balanced Family Finances |
+| SMTP | Custom SMTP required in production. Built-in mailer is rate-limited |
+
+### 5.6 Acceptance
+
+- [ ] `/login` Forgot your password sends a recovery email when an email is entered
+- [ ] Empty email shows the enter-email message, no request
+- [ ] Link opens `/auth/set-password`, not `/login` and not `/`
+- [ ] Dashboard recovery emails that land on Site URL still reach `/auth/set-password`
+- [ ] New password min 8; mismatch blocked; success lands on `/` signed in
+- [ ] Expired/used link explains what to do and links to `/login`
+- [ ] Coach invite and family reset share this page
+- [ ] `/auth/set-password` is public in middleware
 
 ---
-
-
 
 ## 6. Files to Create/Modify
 
@@ -486,10 +547,12 @@ const { error } = await supabase.auth.updateUser({
 | `components/providers.tsx` | Create | Provider wrapper          |
 | `app/layout.tsx`           | Modify | Wrap with Providers       |
 | `app/signup/page.tsx`      | Modify | Use real Supabase auth; show Check your email when confirmation required |
-| `app/login/page.tsx`       | Create | User login page; map email-not-confirmed error |
+| `app/login/page.tsx`       | Create | User login page; map email-not-confirmed error; Forgot your password |
 | `hooks/use-auth.ts`        | Create | Convenience hook          |
-| `app/auth/callback/route.ts` | Create | Exchange confirmation code for session; redirect to `/household` |
-| `middleware.ts`            | Modify | Treat `/auth/callback` as public |
+| `app/auth/callback/route.ts` | Create | Exchange confirmation / recovery; recovery → `/auth/set-password` |
+| `app/auth/set-password/page.tsx` | Create | Set password from invite or reset link |
+| `components/auth-recovery-redirect.tsx` | Create | Dashboard recovery emails that hit Site URL |
+| `middleware.ts`            | Modify | Treat `/auth/callback` and `/auth/set-password` as public |
 
 
 ---
@@ -508,3 +571,4 @@ const { error } = await supabase.auth.updateUser({
 - [ ] Profile is auto-created via database trigger
 - [ ] Activity is logged on signup/login/logout
 - [ ] Email confirmation flow works end-to-end (see §1.6.6)
+- [ ] Password reset works end-to-end (see §5.6)

@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/household'
+  const next =
+    searchParams.get('next') ?? (type === 'recovery' ? '/auth/set-password' : '/household')
   const safeNext = next.startsWith('/') ? next : '/household'
 
   const successRedirect = NextResponse.redirect(new URL(safeNext, origin))

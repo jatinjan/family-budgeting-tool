@@ -22,6 +22,8 @@ This spec defines route protection logic to ensure unauthenticated users cannot 
 | `/signup` | User registration |
 | `/login` | User login |
 | `/admin/login` | Admin login |
+| `/auth/callback` | Email confirmation / OAuth exchange |
+| `/auth/set-password` | Set password from invite or reset link |
 
 ### 1.2 Protected Routes (Auth Required)
 

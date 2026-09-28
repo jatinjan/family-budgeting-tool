@@ -17,7 +17,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | File | Description | Priority |
 |------|-------------|----------|
 | [`supabase-schema.sql`](./supabase-schema.sql) | Complete database schema ready to run in Supabase SQL Editor | P0 |
-| [`auth-flow.md`](./auth-flow.md) | Sign up, sign in, sign out, session management | P0 |
+| [`auth-flow.md`](./auth-flow.md) | Sign up, sign in, sign out, session, password reset | P0 |
 | [`sync-layer.md`](./sync-layer.md) | IndexedDB ↔ Supabase bidirectional sync with state machine | P0 |
 | [`protected-routes.md`](./protected-routes.md) | Route protection, middleware, redirects | P0 |
 | [`budget-calculations.md`](./budget-calculations.md) | Frequency multipliers, category totals, planning mode | P0 |
@@ -151,7 +151,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `contexts/AuthContext.tsx` — Auth state provider
 - `components/providers.tsx` — Provider wrapper
 - `app/signup/page.tsx` — Real auth signup
-- `app/login/page.tsx` — User login page
+- `app/login/page.tsx` — User login page + password reset request
+- `app/auth/set-password/page.tsx` — Set password from invite or reset
+- `components/auth-recovery-redirect.tsx` — Recovery emails that hit Site URL
 - `hooks/use-auth.ts` — Convenience hook
 
 ### sync-layer.md

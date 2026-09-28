@@ -211,7 +211,7 @@ New route handlers:
 
 ### 5.1 `/auth/set-password`
 
-New family page. Accepts the recovery session, asks for a new password (same rules as signup), then routes to `/`. Sign-in triggers `claim_family_budget()` (§6.1).
+Shared with family password reset. Behaviour is defined in [`auth-flow.md`](./auth-flow.md) §5. Coach invite is journey B on that page: recovery session, new password (same rules as signup), then `/`. Sign-in triggers `claim_family_budget()` (§6.1).
 
 ---
 
