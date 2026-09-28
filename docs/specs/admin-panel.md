@@ -192,7 +192,7 @@ Consultation is specified in [`admin-consultation-view.md`](./admin-consultation
 
 ### 3.5 Read-Only Enforcement
 
-Admin can only view, not edit. RLS policies enforce this:
+Admin can only view, not edit, unless they hold an active coach edit lease for that family ([`coach-editing.md`](./coach-editing.md)). RLS policies enforce this:
 
 ```sql
 -- Admins can only SELECT, not INSERT/UPDATE/DELETE

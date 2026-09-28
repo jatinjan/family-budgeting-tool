@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation"
 import { BottomNav } from "@/components/bottom-nav"
 import { TopNav } from "@/components/top-nav"
 import { Toaster } from "@/components/ui/toaster"
+import { BudgetEditLockBanner } from "@/components/budget-edit-lock-banner"
 import { useAuth } from "@/contexts/AuthContext"
+import { useBudgetEditLock } from "@/hooks/use-budget-edit-lock"
 
 function shouldShowUserChrome(pathname: string, isLoggedIn: boolean): boolean {
   if (!isLoggedIn) return false
@@ -19,11 +21,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/"
   const { user, loading } = useAuth()
   const showUserChrome = shouldShowUserChrome(pathname, !loading && !!user)
+  const { phase } = useBudgetEditLock()
+  const budgetLocked = showUserChrome && (phase === "locked" || phase === "unlocking")
 
   return (
     <>
       {showUserChrome ? <TopNav /> : null}
+      {showUserChrome ? <BudgetEditLockBanner /> : null}
       <div
+        data-budget-locked={budgetLocked ? "true" : undefined}
         className={
           showUserChrome
             ? "min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"

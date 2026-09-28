@@ -25,6 +25,8 @@ export interface Database {
           balance_goal: string | null
           yearly_savings_goal: string | null
           monthly_buffer: string | null
+          created_by_coach_id: string | null
+          claimed_at: string | null
         }
         Insert: {
           id: string
@@ -38,6 +40,8 @@ export interface Database {
           balance_goal?: string | null
           yearly_savings_goal?: string | null
           monthly_buffer?: string | null
+          created_by_coach_id?: string | null
+          claimed_at?: string | null
         }
         Update: {
           id?: string
@@ -51,6 +55,8 @@ export interface Database {
           balance_goal?: string | null
           yearly_savings_goal?: string | null
           monthly_buffer?: string | null
+          created_by_coach_id?: string | null
+          claimed_at?: string | null
         }
         Relationships: []
       }
@@ -261,6 +267,12 @@ export interface Database {
         }
         Relationships: []
       }
+      budget_edit_leases: {
+        Row: BudgetEditLeaseRow
+        Insert: Record<string, never>
+        Update: Record<string, never>
+        Relationships: []
+      }
       activity_log: {
         Row: {
           id: string
@@ -300,6 +312,47 @@ export interface Database {
         Args: { code_input: string }
         Returns: boolean
       }
+      coach_start_setup: {
+        Args: { p_family: string }
+        Returns: BudgetEditLeaseRow
+      }
+      coach_request_assist: {
+        Args: { p_family: string }
+        Returns: BudgetEditLeaseRow
+      }
+      family_respond_assist: {
+        Args: { p_lease: string; p_accept: boolean }
+        Returns: BudgetEditLeaseRow
+      }
+      end_edit_lease: {
+        Args: { p_lease: string }
+        Returns: BudgetEditLeaseRow
+      }
+      claim_family_budget: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      get_my_edit_state: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      coach_create_entity: {
+        Args: {
+          p_family: string
+          p_entity_type: 'child' | 'adult' | 'household'
+          p_fields: Json
+          p_categories: Json
+        }
+        Returns: string
+      }
+      coach_delete_entity: {
+        Args: {
+          p_family: string
+          p_entity_type: 'child' | 'adult' | 'household'
+          p_entity: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -308,6 +361,32 @@ export interface Database {
       [_ in never]: never
     }
   }
+}
+
+export type BudgetEditLeaseMode = 'setup' | 'assist'
+export type BudgetEditLeaseStatus = 'requested' | 'active' | 'ended' | 'declined'
+
+// Type alias, not interface: supabase-js table rows must be assignable to Record<string, unknown>.
+export type BudgetEditLeaseRow = {
+  id: string
+  user_id: string
+  coach_id: string
+  mode: BudgetEditLeaseMode
+  status: BudgetEditLeaseStatus
+  requested_at: string
+  request_expires_at: string | null
+  granted_at: string | null
+  expires_at: string | null
+  ended_at: string | null
+  ended_by: string | null
+  end_reason:
+    | 'coach_done'
+    | 'family_took_back'
+    | 'claimed'
+    | 'declined'
+    | 'cancelled'
+    | 'expired'
+    | null
 }
 
 // Convenience types
@@ -319,3 +398,4 @@ export type Category = Database['public']['Tables']['categories']['Row']
 export type ExpenseItem = Database['public']['Tables']['expense_items']['Row']
 export type PromoCode = Database['public']['Tables']['promo_codes']['Row']
 export type ActivityLog = Database['public']['Tables']['activity_log']['Row']
+export type BudgetEditLease = BudgetEditLeaseRow

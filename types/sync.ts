@@ -29,7 +29,8 @@ export type SyncFailureCode =
   | 'PULL_FAILED'
   | 'OWNER_MISMATCH'
   | 'RECOVERY_REQUIRED'
-  | 'VERSION_CONFLICT';
+  | 'VERSION_CONFLICT'
+  | 'BUDGET_LOCKED';
 
 export interface SyncRowFailure {
   code: SyncFailureCode;

@@ -24,7 +24,7 @@ The existing family briefing at `/admin/families/[id]` stays. Consultation is a 
 | Always on | No feature flag. Every family is openable, including `signed_up` with no budget. |
 | Show drafts | Empty categories render as "not started". Do not hide incomplete data. |
 | Same information | Same sections, entities, items, and totals the family sees. |
-| Read-only | No inputs that write family data. No save/edit/delete actions. |
+| Read-only | No inputs that write family data. No save/edit/delete actions. Coach writes happen only in the separate editor under an edit lease — see [`coach-editing.md`](./coach-editing.md). |
 | No impersonation | `auth.uid()` remains the admin. Do not sign in as the family. Do not load IndexedDB. |
 | Stale-if-offline | Admin sees last synced cloud state. Offline-only device edits appear after the family reconnects. |
 | Live updates | Consultation subscribes to Supabase Realtime for that family's rows and reloads silently. Refresh stays as a fallback. |

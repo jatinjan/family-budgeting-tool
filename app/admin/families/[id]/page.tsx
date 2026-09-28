@@ -34,6 +34,7 @@ import {
   ClipboardList,
 } from "lucide-react"
 import { BalanceIntentionSummary } from "@/components/balance-intention-summary"
+import { CoachEditControls } from "./coach-edit-controls"
 
 const BRAND = {
   teal: "#63A8A3",
@@ -574,6 +575,7 @@ export default function FamilyDetailPage({
                 <ClipboardList className="h-4 w-4" />
                 Open consultation
               </Button>
+              <CoachEditControls familyId={id} profile={profile} />
               <div className="text-sm text-gray-500 sm:text-right">
                 <div className="flex items-center gap-1.5 sm:justify-end">
                   <Calendar className="h-4 w-4" />

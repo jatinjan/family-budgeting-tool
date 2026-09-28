@@ -15,6 +15,7 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.e2e.local
 
 # Vercel
 .vercel/
@@ -44,6 +45,9 @@ tsconfig.tsbuildinfo
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+blob-report/
 
 # v0 runtime files
 __v0_runtime_loader.js

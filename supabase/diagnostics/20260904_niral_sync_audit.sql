@@ -1,5 +1,6 @@
 -- Read-only production evidence pack for cross-device sync.
 -- Run in Supabase SQL Editor. This script does not modify data.
+-- Replace TARGET_USER_EMAIL before running. Do not commit a real customer email.
 
 -- 1. Account and Balance intention
 SELECT
@@ -11,13 +12,13 @@ SELECT
   p.monthly_buffer,
   p.last_active_at
 FROM public.profiles p
-WHERE lower(p.email) = lower('niral_15@hotmail.com');
+WHERE lower(p.email) = lower('TARGET_USER_EMAIL');
 
 -- 2. Cloud row inventory
 WITH target AS (
   SELECT id
   FROM public.profiles
-  WHERE lower(email) = lower('niral_15@hotmail.com')
+  WHERE lower(email) = lower('TARGET_USER_EMAIL')
 )
 SELECT 'adults' AS table_name, count(*) AS row_count
 FROM public.adults
@@ -43,7 +44,7 @@ WHERE user_id = (SELECT id FROM target);
 WITH target AS (
   SELECT id
   FROM public.profiles
-  WHERE lower(email) = lower('niral_15@hotmail.com')
+  WHERE lower(email) = lower('TARGET_USER_EMAIL')
 )
 SELECT 'adult' AS entity_type, id, name, age, NULL::text AS detail
 FROM public.adults
@@ -62,7 +63,7 @@ ORDER BY entity_type, name;
 WITH target AS (
   SELECT id
   FROM public.profiles
-  WHERE lower(email) = lower('niral_15@hotmail.com')
+  WHERE lower(email) = lower('TARGET_USER_EMAIL')
 )
 SELECT
   c.entity_type,
@@ -82,7 +83,7 @@ ORDER BY c.entity_type, c.entity_id;
 WITH target AS (
   SELECT id
   FROM public.profiles
-  WHERE lower(email) = lower('niral_15@hotmail.com')
+  WHERE lower(email) = lower('TARGET_USER_EMAIL')
 )
 SELECT c.id, c.entity_type, c.entity_id, c.name
 FROM public.categories c
@@ -108,7 +109,7 @@ WHERE c.user_id = (SELECT id FROM target)
 WITH target AS (
   SELECT id
   FROM public.profiles
-  WHERE lower(email) = lower('niral_15@hotmail.com')
+  WHERE lower(email) = lower('TARGET_USER_EMAIL')
 )
 SELECT ei.id, ei.name, ei.category_id, ei.frequency
 FROM public.expense_items ei

@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase"
 import { formatRelativeTime } from "@/lib/utils/formatters"
 import type { Profile } from "@/types/database"
 import { ChevronRight, Loader2, RefreshCw, Star } from "lucide-react"
+import { AddFamilyDialog } from "./add-family-dialog"
 
 const BRAND = {
   teal: "#63A8A3",
@@ -148,9 +149,12 @@ export function UsersTab() {
             {users.length} registered {users.length === 1 ? 'family' : 'families'}. Click a row to view details.
           </CardDescription>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchUsers}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <AddFamilyDialog />
+          <Button variant="ghost" size="sm" onClick={fetchUsers} aria-label="Refresh families">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {users.length === 0 ? (
@@ -197,7 +201,13 @@ export function UsersTab() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {onboardingBadge(user.onboarding_status as OnboardingStatus)}
+                    {user.claimed_at === null ? (
+                      <Badge className="border-transparent bg-violet-100 text-violet-700 text-xs">
+                        Not signed in yet
+                      </Badge>
+                    ) : (
+                      onboardingBadge(user.onboarding_status as OnboardingStatus)
+                    )}
                   </TableCell>
                   <TableCell className="text-gray-500">
                     {formatRelativeTime(user.signed_up_at)}

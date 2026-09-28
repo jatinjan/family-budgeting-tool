@@ -126,3 +126,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Coach edit lease: family can navigate and watch, but not type. Writes are
+   also rejected in lib/sync.ts and by the database. */
+[data-budget-locked="true"] :is(
+  input,
+  textarea,
+  select,
+  [role="combobox"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="slider"]
+) {
+  pointer-events: none;
+  opacity: 0.6;
+}

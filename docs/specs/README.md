@@ -32,6 +32,7 @@ These specifications provide detailed, actionable implementation guidance for bu
 | [`balance-type-polish.md`](./balance-type-polish.md) | Balance `/` MVP type hierarchy (Nunito display + Inter body) | P1 |
 | [`admin-panel.md`](./admin-panel.md) | Admin dashboard, user management, promo codes, activity log | P0 |
 | [`admin-consultation-view.md`](./admin-consultation-view.md) | Read-only family consultation workspace (same information as the customer) | P0 |
+| [`coach-editing.md`](./coach-editing.md) | Coach fills in a family budget: setup before invite, or assist with family consent; one-writer edit lease | P0 |
 | [`data-migration.md`](./data-migration.md) | Migrate existing IndexedDB data on signup | P0 |
 | [`error-handling.md`](./error-handling.md) | Error categories, notifications, retry logic, boundaries | P1 |
 

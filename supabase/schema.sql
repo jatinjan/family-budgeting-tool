@@ -436,3 +436,11 @@ BEGIN
     END;
   END LOOP;
 END $$;
+
+-- =====================================================
+-- COACH EDITING (docs/specs/coach-editing.md)
+-- After this file, run supabase/migrations/20261001_coach_edit_lease.sql.
+-- It adds budget_edit_leases, profiles.created_by_coach_id / claimed_at,
+-- updated_by on budget tables, the one-writer guard trigger, coach write
+-- policies, lease RPCs, and protects profiles.is_admin from self-update.
+-- =====================================================

@@ -3,6 +3,11 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:smoke": "playwright test e2e/smoke",
+    "test:resilience": "playwright test e2e/resilience",
+    "test:release": "npm run test:sync && npm run typecheck && npm run build && playwright test e2e/smoke --repeat-each=2",
     "test:sync": "node scripts/test-sync-policy.mjs && node scripts/verify-cross-device-sync-fix.mjs && node scripts/verify-sync-field-map.mjs && node scripts/verify-balance-intention-sync.mjs",
     "start": "next start"
   },
@@ -59,10 +64,12 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "24.9.1",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "dotenv": "^17.4.2",
     "postcss": "8.5.6",
     "tailwindcss": "^4.1.9",
     "typescript": "5.9.3"

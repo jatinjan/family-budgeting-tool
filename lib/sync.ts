@@ -125,6 +125,7 @@ let ownerMustHydrate = false
 let internalMutationDepth = 0
 let writeHooksAttached = false
 let coordinatorPromise: Promise<SyncResult> | null = null
+let budgetEditLocked = false
 const queuedTriggers = new Set<SyncTrigger>()
 const syncStateListeners = new Set<(state: GlobalSyncState) => void>()
 const ownershipListeners = new Set<(state: OwnershipState) => void>()
@@ -152,6 +153,36 @@ class VersionConflict extends Error {
     super('Cloud data changed since this device last loaded it')
     this.name = 'VersionConflict'
   }
+}
+
+/** Thrown by Dexie write hooks while a coach holds this family's edit lease. */
+export class BudgetLockedError extends Error {
+  readonly code: SyncFailureCode = 'BUDGET_LOCKED'
+
+  constructor() {
+    super('Your coach is editing this budget. Editing returns when they are done.')
+    this.name = 'BudgetLockedError'
+  }
+}
+
+/**
+ * While locked, user writes are rejected locally and queued writes are not
+ * pushed. Pulls continue so the coach's changes appear on this device.
+ */
+export function setBudgetEditLocked(locked: boolean): void {
+  budgetEditLocked = locked
+}
+
+export function isBudgetEditLocked(): boolean {
+  return budgetEditLocked
+}
+
+function isServerBudgetLocked(error: unknown): boolean {
+  const message =
+    typeof error === 'object' && error && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : String(error)
+  return message.includes('BUDGET_LOCKED')
 }
 
 export function getSyncState(): GlobalSyncState {
@@ -336,6 +367,7 @@ export function attachSyncWriteHooks(): void {
   for (const tableName of SYNCABLE_TABLES) {
     db.table(tableName).hook('creating', (_key, obj) => {
       if (internalMutationDepth > 0) return
+      if (budgetEditLocked) throw new BudgetLockedError()
       const record = obj as SyncableFields
       if (record.syncStatus === 'SYNCED' || record.cloudId) return
       record.syncStatus = 'PENDING'
@@ -351,6 +383,7 @@ export function attachSyncWriteHooks(): void {
 
     db.table(tableName).hook('updating', (mods, _key, obj: SyncableFields | undefined) => {
       if (internalMutationDepth > 0 || !obj) return mods
+      if (budgetEditLocked) throw new BudgetLockedError()
       const changes = mods as Partial<SyncableFields> & Record<string, unknown>
       const onlySyncMeta = Object.keys(changes).every((key) =>
         [
@@ -383,6 +416,7 @@ export function attachSyncWriteHooks(): void {
       obj: (SyncableFields & { id?: number }) | undefined,
       transaction: Transaction,
     ) {
+      if (internalMutationDepth === 0 && budgetEditLocked) throw new BudgetLockedError()
       // Collection.delete() can call this hook without loading the row.
       if (!obj || internalMutationDepth > 0 || !activeOwnerUserId || !obj.cloudId) return
       const tombstone = {
@@ -620,6 +654,11 @@ async function processDeleteTombstones(
       await withInternalMutation(() => db.syncQueue.delete(tombstone.id as number))
       counts[table].deleted += 1
     } catch (error) {
+      if (isServerBudgetLocked(error)) {
+        // Another device queued this before the lock. Keep it for after unlock.
+        counts[table].skipped += 1
+        continue
+      }
       const message = error instanceof Error ? error.message : String(error)
       const isConflict = error instanceof VersionConflict
       await withInternalMutation(() =>
@@ -900,6 +939,17 @@ async function pushWrites(userId: string, counts: CycleCounts): Promise<SyncRowF
           )
           counts[table].pushed += 1
         } catch (error) {
+          if (isServerBudgetLocked(error)) {
+            await withInternalMutation(() =>
+              db.table(table).update(record.id, {
+                syncStatus: 'PENDING' as SyncStatus,
+                syncErrorCode: 'BUDGET_LOCKED' as SyncFailureCode,
+                syncErrorMessage: 'Waiting for your coach to finish editing',
+              }),
+            )
+            counts[table].skipped += 1
+            continue
+          }
           const isDependency = error instanceof DependencyFailure
           const isConflict = error instanceof VersionConflict
           const code: SyncFailureCode = isDependency
@@ -1416,7 +1466,7 @@ async function runCycle(trigger: SyncTrigger): Promise<SyncResult> {
     await markOwnerHydrated(user.id)
     setOwnershipState('READY')
 
-    if (plan.push) {
+    if (plan.push && !budgetEditLocked) {
       failures.push(
         ...(await processDeleteTombstones(user.id, counts)),
         ...(await pushWrites(user.id, counts)),

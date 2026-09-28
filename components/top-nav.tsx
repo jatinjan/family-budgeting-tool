@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { ChevronDown, LogOut, Loader2, Home, Users, User } from "lucide-react"
 import { APP_CONFIG } from "@/lib/config"
 import { useAuth } from "@/contexts/AuthContext"
+import { useSyncStatus } from "@/hooks/use-sync"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -37,6 +38,7 @@ const FAMILY_BLURBS: Record<(typeof FAMILY_NAV_CHILDREN)[number]["id"], string> 
 export function TopNav() {
   const pathname = usePathname() || "/"
   const { signOut } = useAuth()
+  const { syncState, pendingCount } = useSyncStatus()
   const [signingOut, setSigningOut] = useState(false)
 
   async function handleSignOut() {
@@ -51,7 +53,12 @@ export function TopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-50 hidden border-b bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80 md:block">
+    <header
+      className="sticky top-0 z-50 hidden border-b bg-card/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80 md:block"
+      data-testid="sync-probe"
+      data-sync-state={syncState}
+      data-pending-count={pendingCount}
+    >
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
         <Link
           href="/"
