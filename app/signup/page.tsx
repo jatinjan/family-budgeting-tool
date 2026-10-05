@@ -574,7 +574,14 @@ export default function SignUpPage() {
               </Button>
 
               <p className="text-center text-xs text-gray-500">
-                By signing up, you agree to our Terms of Service and Privacy Policy
+                By signing up, you agree to our{" "}
+                <a href="/terms" className="underline underline-offset-4" style={{ color: BRAND.deepTeal }}>
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" className="underline underline-offset-4" style={{ color: BRAND.deepTeal }}>
+                  Privacy Policy
+                </a>
               </p>
             </form>
           </CardContent>

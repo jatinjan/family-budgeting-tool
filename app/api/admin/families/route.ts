@@ -1,6 +1,5 @@
 import {
   RouteError,
-  getCallerClient,
   getServiceClient,
   requireAdmin,
   routeErrorResponse,
@@ -12,17 +11,19 @@ export const dynamic = 'force-dynamic'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * Coach creates a family login (no password, no email yet) and starts a setup
- * lease so she can fill in the budget before inviting them.
+ * Coach creates a family login with a temporary password so she can sign in as
+ * them for the first consult. No email is sent. No setup lease is started.
+ * Spec: docs/specs/coach-editing.md §2.1
  */
 export async function POST(request: Request) {
   try {
     const caller = await requireAdmin(request)
     const body = (await request.json().catch(() => null)) as
-      | { family_name?: unknown; email?: unknown }
+      | { family_name?: unknown; email?: unknown; password?: unknown }
       | null
     const familyName = String(body?.family_name ?? '').trim()
     const email = String(body?.email ?? '').trim().toLowerCase()
+    const password = String(body?.password ?? '')
 
     if (!familyName || familyName.length > 80) {
       throw new RouteError(400, 'Enter a family name (up to 80 characters).')
@@ -30,10 +31,17 @@ export async function POST(request: Request) {
     if (!EMAIL_PATTERN.test(email)) {
       throw new RouteError(400, 'Enter a valid email address.')
     }
+    if (password.length < 8) {
+      throw new RouteError(400, 'Password must be at least 8 characters.')
+    }
+    if (password.length > 128) {
+      throw new RouteError(400, 'Password is too long.')
+    }
 
     const service = getServiceClient()
     const { data: created, error: createError } = await service.auth.admin.createUser({
       email,
+      password,
       email_confirm: true,
       user_metadata: { family_name: familyName },
     })
@@ -63,18 +71,6 @@ export async function POST(request: Request) {
     if (profileError) {
       await rollback()
       throw new RouteError(500, 'Could not prepare the family profile.')
-    }
-
-    const asCoach = getCallerClient(caller.accessToken)
-    const { error: leaseError } = await asCoach.rpc('coach_start_setup', { p_family: familyId })
-    if (leaseError) {
-      await rollback()
-      throw new RouteError(
-        500,
-        /function/i.test(leaseError.message)
-          ? 'Coach editing is not set up in the database yet. Run the coach edit migration.'
-          : 'Could not start editing for this family.',
-      )
     }
 
     await service.from('activity_log').insert({

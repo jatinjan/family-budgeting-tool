@@ -26,7 +26,7 @@ export async function sendFamilyInvite(familyId: string): Promise<void> {
   })
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null
-    throw new Error(body?.error || "Could not send the invite.")
+    throw new Error(body?.error || "Could not send the password reset.")
   }
 }
 
@@ -43,10 +43,10 @@ export function CoachEditControls({ familyId, profile }: { familyId: string; pro
     setInviting(true)
     try {
       await sendFamilyInvite(familyId)
-      toast({ title: "Invite sent", description: `${profile.email} will get a link to set a password.` })
+      toast({ title: "Password reset sent", description: `${profile.email} will get a link to set their own password.` })
     } catch (error) {
       toast({
-        title: "Invite not sent",
+        title: "Password reset not sent",
         description: error instanceof Error ? error.message : "Something went wrong.",
         variant: "destructive",
       })
@@ -97,12 +97,12 @@ export function CoachEditControls({ familyId, profile }: { familyId: string; pro
         <p className="text-xs text-gray-500">
           {lease.lease?.mode === "assist"
             ? `Family's app is view-only · ${minutesUntil(lease.lease?.expires_at, lease.now)} min left`
-            : "Setting up · the family has not signed in yet"}
+            : "Setting up · they have not set their own password yet"}
         </p>
         {!claimed ? (
           <Button variant="link" size="sm" className="h-auto gap-1 p-0" disabled={inviting} onClick={handleInvite}>
             {inviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
-            Send invite email
+            Send password reset
           </Button>
         ) : null}
         {errorLine}
@@ -128,10 +128,10 @@ export function CoachEditControls({ familyId, profile }: { familyId: string; pro
           </Button>
           <Button variant="ghost" size="sm" className="gap-1" disabled={inviting} onClick={handleInvite}>
             {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-            Send invite
+            Send password reset
           </Button>
         </div>
-        <p className="text-xs text-gray-500">Not signed in yet</p>
+        <p className="text-xs text-gray-500">They have not set their own password yet</p>
         {errorLine}
       </div>
     )

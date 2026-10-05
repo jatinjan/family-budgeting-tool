@@ -14,6 +14,7 @@ function shouldShowUserChrome(pathname: string, isLoggedIn: boolean): boolean {
   if (pathname.startsWith("/admin")) return false
   if (pathname === "/login" || pathname === "/signup") return false
   if (pathname.startsWith("/auth/")) return false
+  if (pathname === "/terms" || pathname === "/privacy") return false
   return true
 }
 

@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from '@/hooks/use-toast'
 import {
   UNLOCKED_STATE,
-  claimFamilyBudget,
   fetchMyEditState,
   persistLock,
   readPersistedLock,
@@ -47,7 +46,7 @@ function isLockedError(reason: unknown): boolean {
 }
 
 export function BudgetEditLockProvider({ children }: { children: React.ReactNode }) {
-  const { user, profile, isAdmin, refreshProfile } = useAuth()
+  const { user, isAdmin } = useAuth()
   const [phase, setPhase] = useState<BudgetEditPhase>('unlocked')
   const [edit, setEdit] = useState<FamilyEditState>(UNLOCKED_STATE)
   const [waitingForConnection, setWaitingForConnection] = useState(false)
@@ -57,7 +56,6 @@ export function BudgetEditLockProvider({ children }: { children: React.ReactNode
   const userId = user && !isAdmin ? user.id : null
   const running = useRef<Promise<void> | null>(null)
   const rerun = useRef(false)
-  const claimedFor = useRef<string | null>(null)
 
   const applyLocked = useCallback(async (uid: string, state: FamilyEditState) => {
     setBudgetEditLocked(true)
@@ -151,22 +149,6 @@ export function BudgetEditLockProvider({ children }: { children: React.ReactNode
       cancelled = true
     }
   }, [userId, refresh])
-
-  useEffect(() => {
-    if (!userId || !profile || profile.id !== userId) return
-    if (profile.claimed_at || claimedFor.current === userId) return
-    claimedFor.current = userId
-    void (async () => {
-      try {
-        await claimFamilyBudget()
-        await refreshProfile()
-      } catch (claimError) {
-        claimedFor.current = null
-        console.error('Could not claim budget', claimError)
-      }
-      await refresh()
-    })()
-  }, [userId, profile, refreshProfile, refresh])
 
   useEffect(() => {
     if (!userId) return

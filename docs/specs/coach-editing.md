@@ -11,7 +11,7 @@
 
 Niral needs to enter budget data for clients who are not comfortable doing it themselves. Two situations:
 
-1. **Setup** — a new client who has not logged in yet. She creates the family, fills in the budget, then invites them. When they log in, the budget is already there.
+1. **Setup** — a new client. She creates a login with a temporary password, signs into the family app as them for the first consult, then later emails a reset so they set their own password. **Ask to help** is for after that, if they stall.
 2. **Assist** — a client who already uses the app, is part-way through, and does not know some answers. They let her fill in the gaps, then carry on.
 
 Both use **one mechanism: an edit lease.** For any family, exactly one party may write the budget at a time — the family, or one coach holding a lease. The database enforces this. The UI only reflects it.
@@ -51,21 +51,33 @@ This does not replace consultation. Consultation stays read-only for any admin w
 
 ### 2.1 Setup (new client)
 
+Niral’s consult flow (Oct 2026): she creates a **temporary password**, signs into the **family app** as them for the first consult, then later emails a reset. They set their own password and accept terms. If they stall after that, she uses **Ask to help** (§2.2).
+
 ```
-Admin → Users → "Add family"
-  → enter family name + email → Create
-  → server creates the auth user (no password, no email yet)
-  → setup lease starts automatically (coach = me)
-  → /admin/families/[id]/edit  — fill household, adults, children, costs
-  → "Send invite" (any time; can resend)
-  → client gets "Set your password" email → sets password → signs in
-  → claim_family_budget() ends the setup lease
-  → client app pulls the budget; client now holds the pen
+Admin → Families → Add family
+  → family name + email + temporary password (min 8)
+  → server creates the auth user with that password (email already confirmed)
+  → claimed_at stays null; no setup lease is started
+  → admin sees the email + password once (copy them; they are not shown again)
+
+First consult:
+  → Niral signs out of admin, signs into /login as that family
+  → family app (not the coach editor) — build one household member, walk the features
+
+Following consult:
+  → Admin → family → Send password reset
+  → they open the link → /auth/set-password
+  → new password + tick Terms and Privacy → claim_family_budget()
+  → claimed_at set; temp password no longer works
+
+If they do not finish the profile after claiming:
+  → Ask to help (§2.2)
 ```
 
-- She can fill in before or after sending the invite.
-- If the client claims while she is still typing, her next save is rejected with **"This family has signed in and taken over their budget."** Everything saved before that is kept.
-- She can end the setup lease herself (**Stop editing**). While the family is unclaimed she can start a new setup lease again from the family page.
+- Do **not** call `claim_family_budget()` on ordinary sign-in. Signing in with the temp password would otherwise treat Niral as the family taking over.
+- Unclaimed families can still use **Edit budget** (setup lease) if she prefers the coach editor. Do not start that lease while she is signed in as the family — the lock would block the family login.
+- **Send password reset** is the same recovery email as Forgot password. Allowed until `claimed_at` is set. After claim, they use Forgot password themselves.
+- Temporary password is never stored in `activity_log` or returned after the create response.
 
 ### 2.2 Assist (existing client)
 
@@ -121,7 +133,7 @@ Constraint: partial unique index on `(user_id)` where `status in ('requested','a
 | Column | Type | Notes |
 |--------|------|-------|
 | `created_by_coach_id` | `uuid` null | Set when the family was created by a coach |
-| `claimed_at` | `timestamptz` null | Set on first family sign-in for coach-created families. Self-signups: set at signup |
+| `claimed_at` | `timestamptz` null | Set when the family sets their own password on `/auth/set-password` and accepts terms (coach-created). Self-signups: set at signup. **Not** set when Niral signs in with the temporary password. |
 
 Backfill: `claimed_at = created_at` for all existing profiles.
 
@@ -200,7 +212,7 @@ New route handlers:
 
 | Route | Action |
 |-------|--------|
-| `POST /api/admin/families` | Body `{ family_name, email }`. Verify caller's JWT and `is_admin`. `auth.admin.createUser({ email, email_confirm: true, user_metadata: { family_name, created_by_coach_id } })` with no password. The existing `handle_new_user` trigger creates the profile. Set `created_by_coach_id`, leave `claimed_at` null. Call `coach_start_setup`. Return `{ user_id }`. |
+| `POST /api/admin/families` | Body `{ family_name, email, password }`. Verify admin. `auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { family_name } })`. Set `created_by_coach_id`, `claimed_at` null. Do **not** start a setup lease. Do not log the password. Return `{ user_id }`. |
 | `POST /api/admin/families/[id]/invite` | Verify admin; family unclaimed. Send the password-setup email via the Supabase recovery flow (`redirectTo = {APP_URL}/auth/set-password`). Log `coach_invite_sent`. Rate-limit: one per family per 60 s. |
 
 - `lib/supabase-admin.ts` — server-only service-role client (`import 'server-only'`). Env: `SUPABASE_SERVICE_ROLE_KEY` (server only, Vercel encrypted). Add to `.env.example` without a value.
@@ -211,7 +223,7 @@ New route handlers:
 
 ### 5.1 `/auth/set-password`
 
-Shared with family password reset. Behaviour is defined in [`auth-flow.md`](./auth-flow.md) §5. Coach invite is journey B on that page: recovery session, new password (same rules as signup), then `/`. Sign-in triggers `claim_family_budget()` (§6.1).
+Shared with family password reset. Behaviour is defined in [`auth-flow.md`](./auth-flow.md) §5. After they save a new password and accept terms, `claim_family_budget()` runs on that page.
 
 ---
 
@@ -219,7 +231,7 @@ Shared with family password reset. Behaviour is defined in [`auth-flow.md`](./au
 
 ### 6.1 Claim
 
-In the auth bootstrap, after the owner is verified and before the first reconcile: if `profile.claimed_at` is null, call `claim_family_budget()`, then refresh the profile. Existing ownership rules apply. A guest/unowned Dexie cache is quarantined and never uploaded into a coach-created account.
+In the auth bootstrap, **do not** auto-claim. `claim_family_budget()` runs from `/auth/set-password` after a successful password save and accepted terms. Signing in with a coach-issued temporary password must leave `claimed_at` null.
 
 ### 6.2 Edit lock state
 
@@ -235,7 +247,7 @@ New `contexts/BudgetEditLockContext.tsx` + `hooks/use-budget-edit-lock.ts`:
 - Hooks must still allow writes from the sync pull itself (`runWithoutSyncOutbox`), so her rows can land in the cache.
 - UI: budget inputs, add/delete buttons and item editors are disabled while locked. One banner across the family app:
   - Assist active: **"Niral is filling in your budget. You can watch changes appear. Editing returns when she's done."** + **Take back editing**
-  - Setup cannot be seen by the family (they have not signed in).
+  - Setup lease is optional. Do not start it while signed in as the family.
 
 ### 6.4 Accepting a request
 
@@ -261,7 +273,7 @@ If any check fails: **"We're still saving your changes. Try again in a moment."*
 
 - **Users tab:** **Add family** (§5).
 - **Family briefing** (`/admin/families/[id]`):
-  - Unclaimed: **Edit budget** (starts/resumes setup lease), **Send invite** / **Resend invite**, status "Not signed in yet".
+  - Unclaimed: **Edit budget** (starts/resumes setup lease), **Send password reset**, status "They have not set their own password yet".
   - Claimed, no lease: **Ask to help**.
   - Request pending: "Waiting for [family] to accept…" + **Cancel**. Countdown to request expiry.
   - Assist active (mine): **Edit budget** + time remaining + **Done**.

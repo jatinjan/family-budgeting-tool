@@ -5,9 +5,11 @@ import type { EmailOtpType } from "@supabase/supabase-js"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { APP_CONFIG } from "@/lib/config"
+import { claimFamilyBudget } from "@/lib/budget-edit-lock"
 import { supabase } from "@/lib/supabase"
 import { validatePassword, validatePasswordConfirmation } from "@/lib/utils/validators"
 
@@ -53,6 +55,7 @@ export default function SetPasswordPage() {
   const [linkError, setLinkError] = useState<string | null>(null)
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -73,6 +76,9 @@ export default function SetPasswordPage() {
     if (!passwordCheck.valid) return setFormError(passwordCheck.error ?? null)
     const confirmCheck = validatePasswordConfirmation(password, confirmation)
     if (!confirmCheck.valid) return setFormError(confirmCheck.error ?? null)
+    if (!acceptedTerms) {
+      return setFormError("Please confirm you have read the Terms of Service and Privacy Policy.")
+    }
 
     setFormError(null)
     setStage("saving")
@@ -82,7 +88,17 @@ export default function SetPasswordPage() {
       setStage("ready")
       return
     }
-    // Full reload so auth, sync and the edit lock boot cleanly for this account.
+    try {
+      await claimFamilyBudget()
+    } catch (claimError) {
+      setFormError(
+        claimError instanceof Error
+          ? claimError.message
+          : "Password saved, but we could not finish setup. Try again.",
+      )
+      setStage("ready")
+      return
+    }
     window.location.href = "/"
   }
 
@@ -105,7 +121,7 @@ export default function SetPasswordPage() {
             <div className="space-y-4">
               <p className="text-sm text-destructive">{linkError}</p>
               <p className="text-sm text-muted-foreground">
-                Use Forgot your password on the sign-in page, or ask your coach to resend the invite.
+                Use Forgot your password on the sign-in page, or ask your coach to send a password reset.
               </p>
               <Button asChild variant="outline" className="w-full">
                 <a href="/login">Go to sign in</a>
@@ -134,6 +150,25 @@ export default function SetPasswordPage() {
                   onChange={(event) => setConfirmation(event.target.value)}
                   required
                 />
+              </div>
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="accept-terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(value) => setAcceptedTerms(value === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="accept-terms" className="text-sm font-normal leading-5">
+                  I have read the{" "}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                    Privacy Policy
+                  </a>
+                  .
+                </Label>
               </div>
               {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
               <Button type="submit" className="w-full gap-2" disabled={stage === "saving"}>

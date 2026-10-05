@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 const RESEND_COOLDOWN_MS = 60_000
 
-/** Sends (or resends) the "set your password" email to a coach-created family. */
+/** Sends (or resends) a password-reset email to a coach-created family. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const caller = await requireAdmin(request)
@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw new RouteError(409, 'This family created their own account.')
     }
     if (profile.claimed_at) {
-      throw new RouteError(409, 'This family has already signed in.')
+      throw new RouteError(409, 'This family has already set their own password.')
     }
 
     const since = new Date(Date.now() - RESEND_COOLDOWN_MS).toISOString()
@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .eq('event_type', 'coach_invite_sent')
       .gte('created_at', since)
     if ((count ?? 0) > 0) {
-      throw new RouteError(429, 'An invite was just sent. Wait a minute before resending.')
+      throw new RouteError(429, 'A password reset was just sent. Wait a minute before resending.')
     }
 
     const { error: mailError } = await service.auth.resetPasswordForEmail(profile.email, {
@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         502,
         /rate/i.test(mailError.message)
           ? 'The email service is rate-limited. Try again later or set up custom SMTP.'
-          : 'Could not send the invite email.',
+          : 'Could not send the password reset email.',
       )
     }
 
@@ -58,7 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       user_id: familyId,
       family_name: profile.family_name || profile.email,
       event_type: 'coach_invite_sent',
-      message: `Invite sent to ${profile.email}`,
+      message: `Password reset sent to ${profile.email}`,
       metadata: { actor_id: caller.userId },
     })
 

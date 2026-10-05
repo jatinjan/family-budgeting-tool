@@ -203,7 +203,7 @@ export function UsersTab() {
                   <TableCell>
                     {user.claimed_at === null ? (
                       <Badge className="border-transparent bg-violet-100 text-violet-700 text-xs">
-                        Not signed in yet
+                        They have not set their own password yet
                       </Badge>
                     ) : (
                       onboardingBadge(user.onboarding_status as OnboardingStatus)

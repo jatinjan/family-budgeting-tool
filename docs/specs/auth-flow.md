@@ -455,7 +455,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 **Status:** Implemented — same page as coach invite password setup ([`coach-editing.md`](./coach-editing.md) §5.1)
 
-Supabase does not store the plaintext password. Reset is always "send a link, then set a new password". Coach **Send invite** uses the same Supabase recovery email. There is one family page: `/auth/set-password`. There is no `/reset-password` route.
+Supabase does not store the plaintext password. Reset is always "send a link, then set a new password". Coach **Send password reset** uses the same Supabase recovery email. There is one family page: `/auth/set-password`. There is no `/reset-password` route.
 
 ### 5.1 User journeys
 
@@ -467,8 +467,10 @@ Supabase does not store the plaintext password. Reset is always "send a link, th
   → /auth/set-password → new password (min 8) → /
 ```
 
-**B. Coach invite (unclaimed family)**  
-Admin **Send invite** → same email template → `/auth/set-password` → `/` → `claim_family_budget()`.
+**B. Coach-created family takes over**  
+Admin creates a login with a temporary password (they can sign in immediately). Later: **Send password reset** or Forgot password → `/auth/set-password` → new password + accept Terms and Privacy → `claim_family_budget()` → `/`.
+
+**Terms:** `/terms` and `/privacy` are public. `/auth/set-password` requires the checkbox. `/signup` links the same pages.
 
 **C. Recovery email from the Supabase dashboard**  
 Dashboard uses **Site URL** (`https://mybalancedfamilyfinances.com`), not `/auth/set-password`. The app must detect `type=recovery` on any other path and keep the query/hash while sending the browser to `/auth/set-password`.
@@ -506,7 +508,7 @@ Public route (middleware). No session required to open the page; the link create
 
 After a successful token consume, `history.replaceState` so the tokens leave the URL.
 
-**Form:** new password + confirm. Rules: [`validatePassword`](../../lib/utils/validators.ts) (min 8, max 128) and `validatePasswordConfirmation`. Then `supabase.auth.updateUser({ password })`. Full navigation to `/` so auth, sync, and coach claim boot cleanly.
+**Form:** new password + confirm. Rules: [`validatePassword`](../../lib/utils/validators.ts) (min 8, max 128) and `validatePasswordConfirmation`. Required checkbox: I have read the [Terms of Service](/terms) and [Privacy Policy](/privacy). Then `updateUser({ password })`, then `claim_family_budget()`, then full navigation to `/`.
 
 **Invalid link copy:** **"Use Forgot your password on the sign-in page, or ask your coach to resend the invite."** + **Go to sign in** → `/login`.
 
@@ -534,6 +536,7 @@ After a successful token consume, `history.replaceState` so the tokens leave the
 - [ ] Expired/used link explains what to do and links to `/login`
 - [ ] Coach invite and family reset share this page
 - [ ] `/auth/set-password` is public in middleware
+- [ ] Set-password requires Terms and Privacy; then claims a coach-created family
 
 ---
 
@@ -550,9 +553,11 @@ After a successful token consume, `history.replaceState` so the tokens leave the
 | `app/login/page.tsx`       | Create | User login page; map email-not-confirmed error; Forgot your password |
 | `hooks/use-auth.ts`        | Create | Convenience hook          |
 | `app/auth/callback/route.ts` | Create | Exchange confirmation / recovery; recovery → `/auth/set-password` |
-| `app/auth/set-password/page.tsx` | Create | Set password from invite or reset link |
+| `app/auth/set-password/page.tsx` | Create | Set password from invite or reset; terms checkbox; claim |
+| `app/terms/page.tsx` | Create | Terms of Service |
+| `app/privacy/page.tsx` | Create | Privacy Policy |
 | `components/auth-recovery-redirect.tsx` | Create | Dashboard recovery emails that hit Site URL |
-| `middleware.ts`            | Modify | Treat `/auth/callback` and `/auth/set-password` as public |
+| `middleware.ts`            | Modify | `/auth/callback`, `/auth/set-password`, `/terms`, `/privacy` public |
 
 
 ---
