@@ -77,7 +77,7 @@ export default function SetPasswordPage() {
     const confirmCheck = validatePasswordConfirmation(password, confirmation)
     if (!confirmCheck.valid) return setFormError(confirmCheck.error ?? null)
     if (!acceptedTerms) {
-      return setFormError("Please confirm you have read the Terms of Service and Privacy Policy.")
+      return setFormError("Please confirm you have read the Terms and Conditions and Privacy Policy.")
     }
 
     setFormError(null)
@@ -161,7 +161,7 @@ export default function SetPasswordPage() {
                 <Label htmlFor="accept-terms" className="text-sm font-normal leading-5">
                   I have read the{" "}
                   <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
-                    Terms of Service
+                    Terms and Conditions
                   </a>{" "}
                   and{" "}
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">

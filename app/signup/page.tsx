@@ -576,7 +576,7 @@ export default function SignUpPage() {
               <p className="text-center text-xs text-gray-500">
                 By signing up, you agree to our{" "}
                 <a href="/terms" className="underline underline-offset-4" style={{ color: BRAND.deepTeal }}>
-                  Terms of Service
+                  Terms and Conditions
                 </a>{" "}
                 and{" "}
                 <a href="/privacy" className="underline underline-offset-4" style={{ color: BRAND.deepTeal }}>

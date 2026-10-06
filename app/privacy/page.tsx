@@ -36,7 +36,7 @@ export default function PrivacyPage() {
       </p>
       <p>
         <Link href="/terms" className="underline underline-offset-4">
-          Terms of Service
+          Terms and Conditions
         </Link>
         {" · "}
         <Link href="/login" className="underline underline-offset-4">
