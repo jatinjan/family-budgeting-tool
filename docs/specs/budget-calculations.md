@@ -71,6 +71,32 @@ export function calculateAnnualTotal(
 | $1,500 | annual | 1 | $1,500 |
 | $25 | fortnightly | 2 | $1,300 |
 
+### 1.4 Family app annualisation (source of truth for stored totals)
+
+The family budget sheets do **not** use `calculateAnnualTotal`. Templates set `quantity` to the number of times per year (monthly → 12, weekly → 52, annual → 1). The live helper is `calculateAnnualCost` in `lib/budget-templates.ts`:
+
+```
+annual = cost × quantity
+```
+
+Frequency is a label for the sheet, not a second multiplier. Example: Mortgage Payments $4,700, frequency `monthly`, quantity `12` → **$56,400**.
+
+Admin briefing and any fallback that does not have `item.total` must use this helper. Do not “fix” the family app by multiplying by `FREQUENCY_MULTIPLIERS`.
+
+### 1.5 Keep template line items
+
+Templates live in `lib/budget-templates.ts`. Opening a child, adult, or household budget must restore any missing template category or item (match by `name`, insert cost `0`). Never delete extra items the family added. Do not rewrite sync.
+
+**Oct 2026 additions**
+
+| Entity | Category | Description | Items |
+|--------|----------|-------------|-------|
+| Child | Specialised Equipment and Training | Equipment, gear, training and performance costs for your child’s specialised sport or art activity. | Equipment & Gear; Training & Coaching; Competition/Performance Costs; Maintenance & Upkeep |
+| Child | Meal/Canteen | Child related meal/canteen expenses | Lunch orders; Meals |
+| Adult | Eating Out | Adult related dining and takeaway expenses | Dining In; Coffees; Take Away; Uber Eats |
+
+New entities get these from `initialize*Data` / the coach create path. Existing entities get them the next time that budget sheet loads.
+
 ---
 
 ## 2. Category Totals

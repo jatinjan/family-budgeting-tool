@@ -16,6 +16,7 @@ import {
 } from "@/lib/db"
 import { formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import { ScrollToTop } from "@/components/scroll-to-top"
 import { forwardPlanningNames, needsWantsNames } from "@/lib/planning-categories"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { useTabSnapshot } from "@/hooks/use-tab-snapshot"
@@ -891,6 +892,7 @@ export default function PlanningPage() {
           </CardContent>
         </Card>
       </div>
+      <ScrollToTop />
     </div>
   )
 }

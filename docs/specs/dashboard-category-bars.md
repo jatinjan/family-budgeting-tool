@@ -50,7 +50,8 @@ Household below is already “one bar per category” but still uses the same ro
 - Cleaning leftover `e2e-…` names (data, not this UI)
 - Multi-select Balance goals
 - Admin consultation charts (admin is a separate surface)
-- Redesigning the overview donut or Detailed Breakdown tabs
+- Redesigning Detailed Breakdown tabs
+- Changing overview pie **data** (mobile label treatment in §3.1 only)
 
 ---
 
@@ -63,8 +64,12 @@ Use **one card stack**, not two chart implementations.
 | Card width | Full content width (`max-w-5xl` column), **not** two columns | Full width, 16px side padding |
 | Layout | Title + caption, then chart | Same; no side-by-side Children/Adults |
 | Chart | Recharts `BarChart` `layout="vertical"` | Same chart, shorter plot if needed |
-| Y-axis (categories) | Width 140–180px so long names wrap to 2 lines | Width 112–128px; wrap 2 lines; never rotate |
-| X-axis (money) | Ticks `$0`, mid, max | 2–3 ticks only |
+| Y-axis (categories) | Width 140–180px so long names wrap to 2 lines | Width 140–156px; wrap 2 lines; never rotate or clip |
+| X-axis (money) | Ticks `$0`, mid, max | 2–3 ticks only; do not clip the last tick |
+
+### 3.1 Overview pie (Family Spending Overview)
+
+On viewports under `md`, do **not** draw in-slice labels (`Children: 40%`). They overflow the card. Keep the list of name / amount / percent next to or below the pie. Desktop may keep slice labels.
 | Height | `max(280, 36px × categoryCount + 48)` | `max(240, 32px × categoryCount + 40)` |
 | Touch | Tooltip on tap of a bar | Same; no hover-only information that is required to understand the card |
 | Scroll | Page scrolls; chart is not a nested horizontal scroller | Same. If more than **8** categories, show top 7 + **Other** (sum of the rest) |
@@ -107,7 +112,8 @@ Household today is `flatMap(h => h.categories)` with `name` / `value`. Map to th
 ## 6. Acceptance
 
 - [ ] On a 1280px desktop, Children and Adults cards are full width; labels are horizontal and readable; bars are visible for amounts like $504.
-- [ ] On a 390px phone, the same cards stack; no overlapping 45° text; no horizontal page overflow from the chart.
+- [ ] On a 390px phone, the same cards stack; no overlapping 45° text; no horizontal page overflow from the chart; category names wrap and money ticks are fully visible.
+- [ ] On a 390px phone, the overview pie has no on-slice labels; the list still shows each share.
 - [ ] Caption states how many children/adults; no legend of person names or `e2e-…` IDs.
 - [ ] Tooltip (or tap) can show per-person split when present; the bar itself is the group total.
 - [ ] Household card uses the same horizontal pattern.

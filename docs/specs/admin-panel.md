@@ -190,6 +190,21 @@ Open consultation → /admin/families/[id]/view/dashboard
 
 Consultation is specified in [`admin-consultation-view.md`](./admin-consultation-view.md). The briefing page stays as the one-page coaching overview.
 
+### 3.6 Annual totals (must match the family app)
+
+The family app stores `quantity` as the annual factor already (monthly mortgage: cost $4,700, quantity 12 → annual $56,400). See [`budget-calculations.md`](./budget-calculations.md) §1.4.
+
+`/admin/families/[id]` must **not** call `calculateAnnualTotal(cost, frequency, quantity)` (`cost × quantity × frequency multiplier`). That double-counts and shows ~$676,800 for the same mortgage.
+
+For each expense item on the briefing:
+
+1. Use `item.total` when it is a finite number.
+2. Otherwise use `calculateAnnualCost(cost, frequency, quantity)` from `lib/budget-templates.ts` (cost × quantity).
+
+Consultation (`/view`) already prefers `item.total`. Its fallback must use the same family-app helper, not `calculateAnnualTotal`.
+
+Do not change how the family app calculates or stores totals.
+
 ### 3.5 Read-Only Enforcement
 
 Admin can only view, not edit, unless they hold an active coach edit lease for that family ([`coach-editing.md`](./coach-editing.md)). RLS policies enforce this:

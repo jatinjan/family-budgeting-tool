@@ -144,8 +144,8 @@ export function CategoryTotalBars({
   if (rows.length === 0) return null
 
   const max = Math.max(...rows.map((row) => row.total))
-  const labelWidth = isMobile ? 120 : 168
-  const maxChars = isMobile ? 16 : 22
+  const labelWidth = isMobile ? 148 : 168
+  const maxChars = isMobile ? 18 : 22
   const height = isMobile
     ? Math.max(240, 32 * rows.length + 40)
     : Math.max(280, 36 * rows.length + 48)
@@ -163,7 +163,7 @@ export function CategoryTotalBars({
           <BarChart
             data={rows}
             layout="vertical"
-            margin={{ top: 8, right: 12, left: 4, bottom: 8 }}
+            margin={{ top: 8, right: 16, left: 4, bottom: isMobile ? 16 : 8 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
             <XAxis

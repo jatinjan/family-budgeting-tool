@@ -20,6 +20,7 @@ export const ADULT_FORWARD_PLANNING = [
   'Personal',
   'Gifting',
   'Adult Holidays/ Solo Travel',
+  'Eating Out',
 ]
 
 export const HOUSEHOLD_FORWARD_PLANNING = [
@@ -37,6 +38,8 @@ export const HOUSEHOLD_FORWARD_PLANNING = [
 export const CHILD_NEEDS_WANTS = [
   'Extracurricular',
   'Child Communication and Subscriptions',
+  'Specialised Equipment and Training',
+  'Meal/Canteen',
 ]
 
 export const ADULT_NEEDS_WANTS = [

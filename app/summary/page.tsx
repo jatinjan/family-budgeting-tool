@@ -21,6 +21,7 @@ import { Printer, Download, AlertCircle, Users, User, Home, ChevronDown, Chevron
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { APP_CONFIG, formatCurrency } from "@/lib/config"
 import { PageHeader } from "@/components/page-header"
+import { ScrollToTop } from "@/components/scroll-to-top"
 import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { useTabSnapshot } from "@/hooks/use-tab-snapshot"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -969,6 +970,7 @@ export default function SummaryPage() {
           </div>
         )}
       </div>
+      <ScrollToTop />
     </div>
   )
 }

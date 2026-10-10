@@ -25,6 +25,7 @@ import { useReloadOnSync } from "@/hooks/use-reload-on-sync"
 import { toast } from "@/hooks/use-toast"
 import { clearTabSnapshots } from "@/hooks/use-tab-snapshot"
 import { withSyncWrite } from "@/lib/sync"
+import { ensureBudgetTemplates } from "@/lib/ensure-budget-templates"
 import { ChevronLeft, Plus, Edit2, Trash2 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
@@ -90,6 +91,7 @@ function CategoriesPageContent() {
   async function loadData(id: number) {
     const childData = await db.children.get(id)
     setChild(childData || null)
+    await ensureBudgetTemplates("child", id)
 
     const categoriesData = await db.categories.where("childId").equals(id).sortBy("order")
     setCategories(categoriesData)

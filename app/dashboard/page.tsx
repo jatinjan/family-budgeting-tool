@@ -75,6 +75,15 @@ export default function DashboardPage() {
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string>(snapshot?.selectedHouseholdId ?? "")
   
   const [loading, setLoading] = useState(!snapshot)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)")
+    const apply = () => setIsMobile(media.matches)
+    apply()
+    media.addEventListener("change", apply)
+    return () => media.removeEventListener("change", apply)
+  }, [])
 
   useEffect(() => {
     loadData()
@@ -386,8 +395,12 @@ export default function DashboardPage() {
                         data={overviewData}
                         cx="50%"
                         cy="50%"
-                        labelLine={true}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={!isMobile}
+                        label={
+                          isMobile
+                            ? false
+                            : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
                         outerRadius={100}
                         innerRadius={40}
                         fill="#8884d8"

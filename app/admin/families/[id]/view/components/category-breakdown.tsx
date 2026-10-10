@@ -8,16 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useConsultation } from '@/contexts/ConsultationContext'
 import { categoriesForEntity, itemsForCategory } from '@/lib/consultation-totals'
-import { calculateAnnualTotal, FREQUENCY_LABELS, type Frequency } from '@/lib/utils/calculations'
+import { FREQUENCY_LABELS, type Frequency } from '@/lib/utils/calculations'
+import { calculateAnnualCost, type BudgetFrequency } from '@/lib/budget-templates'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { Category, ExpenseItem } from '@/types/database'
 import { BRAND } from '../consultation-ui'
 
 function itemAnnual(item: ExpenseItem): number {
-  if (item.total) return item.total
+  if (item.total != null && Number.isFinite(Number(item.total))) return Number(item.total)
   const frequency = item.frequency as Frequency
   if (FREQUENCY_LABELS[frequency]) {
-    return calculateAnnualTotal(item.cost, frequency, item.quantity)
+    return calculateAnnualCost(item.cost, item.frequency as BudgetFrequency, item.quantity)
   }
   return 0
 }

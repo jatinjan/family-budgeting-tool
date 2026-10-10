@@ -28,8 +28,7 @@ Source of the category list: client Planning-sheet feedback. Scope is Planning (
 
 ### 1.1 Out of scope
 
-- Budget entry (`/categories`, `/adult-categories`, `/household-categories`)
-- New categories or new line items
+- Budget entry screens except the Oct 2026 template additions in [`budget-calculations.md`](./budget-calculations.md) §1.5
 - Signup, email, admin login
 - New formulas
 
@@ -107,7 +106,9 @@ Holiday                    // add
 
 ```
 Extracurricular
-Child Communication and Subscriptions   // add
+Child Communication and Subscriptions
+Specialised Equipment and Training   // Oct 2026
+Meal/Canteen                         // Oct 2026
 ```
 
 ### 4.3 Adults — forward planning (layout 2.1)
@@ -116,10 +117,11 @@ Child Communication and Subscriptions   // add
 Education
 Medical
 Vehicles/Transport
-Personal Debt Repayment    // add (was wrongly listed as Debt Repayment)
+Personal Debt Repayment
 Personal
 Gifting
-Adult Holidays/ Solo Travel   // add
+Adult Holidays/ Solo Travel
+Eating Out                   // Oct 2026
 ```
 
 ### 4.4 Adults — need/want (layout 2.2)
@@ -196,3 +198,11 @@ From the client note. Check on `/planning` after the family has entered costs in
 - [x] Household **Communications & Subscriptions**: Need / Want + Forward Planning, same as Fitness
 - [x] Admin consultation Planning / Summary use the same lists and totals
 - [ ] Categories with no entered costs stay hidden (existing rule — confirm on device)
+- [ ] Children **Specialised Equipment and Training** and **Meal/Canteen**: Need / Want + Forward Planning
+- [ ] Adults **Eating Out**: Current + Forward Planning, same as household Eating Out
+
+---
+
+## 7. Scroll to top
+
+Planning and Summary are long. After the user scrolls down more than ~400px, show a **Scroll to the top** control (fixed, above the family bottom nav on mobile). Tap scrolls `window` to `0`. Same control on both pages. No change to card logic.

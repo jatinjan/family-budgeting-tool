@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/collapsible"
 import { supabase } from "@/lib/supabase"
 import { formatDateShort, formatRelativeTime, formatCurrency } from "@/lib/utils/formatters"
-import { calculateAnnualTotal, type Frequency } from "@/lib/utils/calculations"
+import { calculateAnnualCost, type BudgetFrequency } from "@/lib/budget-templates"
 import type { Profile, Child, Adult, Household, Category, ExpenseItem } from "@/types/database"
 import {
   ArrowLeft,
@@ -339,11 +339,10 @@ function buildEntityBudget(
   const categoryBudgets: CategoryBudget[] = entityCategories.map(cat => {
     const items = expenseItems.filter(item => item.category_id === cat.id)
     const itemBudgets: ItemBudget[] = items.map(item => {
-      const annualTotal = calculateAnnualTotal(
-        item.cost,
-        item.frequency as Frequency,
-        item.quantity
-      )
+      const annualTotal =
+        item.total != null && Number.isFinite(Number(item.total))
+          ? Number(item.total)
+          : calculateAnnualCost(item.cost, item.frequency as BudgetFrequency, item.quantity)
       return {
         name: item.name,
         cost: item.cost,
